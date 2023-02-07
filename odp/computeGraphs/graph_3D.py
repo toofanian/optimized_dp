@@ -21,7 +21,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
     x3 = hcl.placeholder((g.pts_each_dim[2],), name="x3", dtype=hcl.Float())
     def graph_create(V_new, V_init, x1, x2, x3, t, l0, active_set):
         # Specify intermediate tensors
-        active_set = hcl.compute(V_init.shape, active_set, "active_set")
+        active_set = hcl.compute(V_init.shape, lambda _i, _j, _k: active_set[_i, _j, _k], "active_set")
 
         deriv_diff1 = hcl.compute(V_init.shape, lambda *x: 0, "deriv_diff1")
         deriv_diff2 = hcl.compute(V_init.shape, lambda *x: 0, "deriv_diff2")
