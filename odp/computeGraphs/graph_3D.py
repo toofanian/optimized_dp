@@ -72,6 +72,8 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                 with hcl.for_(0, V_init.shape[1], name="j") as j:
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
                         print(active_set)
+                        print(i, j, k)
+                        print(active_set[i, j, k])
                         if active_set[i, j, k] == 0:
                             hcl.continue_()
 
