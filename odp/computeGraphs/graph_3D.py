@@ -6,7 +6,9 @@ from odp.spatialDerivatives.second_orderENO3D import *
 
 #from user_definer import *
 #def graph_3D(dynamics_obj, grid):
-def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv_dim=1):
+def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv_dim=1, active_set=None):
+    if active_set is None:
+        active_set = np.ones(g.pts_each_dim)
     V_f = hcl.placeholder(tuple(g.pts_each_dim), name="V_f", dtype=hcl.Float())
     V_init = hcl.placeholder(tuple(g.pts_each_dim), name="V_init", dtype=hcl.Float())
     l0 = hcl.placeholder(tuple(g.pts_each_dim), name="l0", dtype=hcl.Float())
@@ -69,6 +71,9 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
             with hcl.for_(0, V_init.shape[0], name="i") as i:  # Plus 1 as for loop count stops at V_init.shape[0]
                 with hcl.for_(0, V_init.shape[1], name="j") as j:
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
+                        if active_set[i, j, k] == 0:
+                            hcl.continue_()
+
                         # Variables to calculate dV_dx
                         dV_dx_L = hcl.scalar(0, "dV_dx_L")
                         dV_dx_R = hcl.scalar(0, "dV_dx_R")

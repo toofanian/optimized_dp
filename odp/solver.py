@@ -80,7 +80,9 @@ def solveValueIteration(MDP_obj):
 
 def HJSolver(dynamics_obj, grid, multiple_value, tau, compMethod,
              plot_option, saveAllTimeSteps=False,
-             accuracy="low", untilConvergent=False, epsilon=2e-3):
+             accuracy="low", untilConvergent=False, epsilon=2e-3, active_set=None):
+    if active_set is None:
+        active_set = np.ones(grid.points_each_dim)
 
     print("Welcome to optimized_dp \n")
     if type(multiple_value) == list:
@@ -151,7 +153,7 @@ def HJSolver(dynamics_obj, grid, multiple_value, tau, compMethod,
 
     # Get executable, obstacle check intial value function
     if grid.dims == 3:
-        solve_pde = graph_3D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
+        solve_pde = graph_3D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, active_set=active_set)
 
     if grid.dims == 4:
         solve_pde = graph_4D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
