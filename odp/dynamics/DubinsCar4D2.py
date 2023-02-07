@@ -1,3 +1,5 @@
+import sys
+
 import heterocl as hcl
 import math
 
@@ -95,6 +97,7 @@ class DubinsCar4D2:
                 opt_w[0] = self.uMin[1]
         # return 3, 4 even if you don't use them
         print((opt_a[0], opt_w[0], in3[0], in4[0]))
+        sys.exit()
         return (opt_a[0], opt_w[0], in3[0], in4[0])
 
 
