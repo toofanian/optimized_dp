@@ -1,5 +1,3 @@
-import sys
-
 import heterocl as hcl
 import math
 
