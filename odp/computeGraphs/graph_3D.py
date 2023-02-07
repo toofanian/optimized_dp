@@ -19,8 +19,10 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
     x1 = hcl.placeholder((g.pts_each_dim[0],), name="x1", dtype=hcl.Float())
     x2 = hcl.placeholder((g.pts_each_dim[1],), name="x2", dtype=hcl.Float())
     x3 = hcl.placeholder((g.pts_each_dim[2],), name="x3", dtype=hcl.Float())
-    def graph_create(V_new, V_init, x1, x2, x3, t, l0):
+    def graph_create(V_new, V_init, x1, x2, x3, t, l0, active_set):
         # Specify intermediate tensors
+        active_set = hcl.compute(V_init.shape, active_set, "active_set")
+
         deriv_diff1 = hcl.compute(V_init.shape, lambda *x: 0, "deriv_diff1")
         deriv_diff2 = hcl.compute(V_init.shape, lambda *x: 0, "deriv_diff2")
         deriv_diff3 = hcl.compute(V_init.shape, lambda *x: 0, "deriv_diff3")
@@ -315,7 +317,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                         Deriv_array[i, j, k] = (dV_dx_L[0] + dV_dx_R[0]) / 2
 
     if generate_SpatDeriv == False:
-        s = hcl.create_schedule([V_f, V_init, x1, x2, x3, t, l0], graph_create)
+        s = hcl.create_schedule([V_f, V_init, x1, x2, x3, t, l0, active_set], graph_create)
         ##################### CODE OPTIMIZATION HERE ###########################
         print("Optimizing\n")
 
