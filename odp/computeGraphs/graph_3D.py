@@ -71,85 +71,83 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                 with hcl.for_(0, V_init.shape[1], name="j") as j:
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
 
-                        with hcl.if_(active_set[i, j, k] == 0):
-                            hcl.continue_()
+                        with hcl.if_(active_set[i, j, k] == 1):
+                            # Variables to calculate dV_dx
+                            dV_dx_L = hcl.scalar(0, "dV_dx_L")
+                            dV_dx_R = hcl.scalar(0, "dV_dx_R")
+                            dV_dx = hcl.scalar(0, "dV_dx")
+                            # Variables to calculate dV_dy
+                            dV_dy_L = hcl.scalar(0, "dV_dy_L")
+                            dV_dy_R = hcl.scalar(0, "dV_dy_R")
+                            dV_dy = hcl.scalar(0, "dV_dy")
+                            # Variables to calculate dV_dtheta
+                            dV_dT_L = hcl.scalar(0, "dV_dT_L")
+                            dV_dT_R = hcl.scalar(0, "dV_dT_R")
+                            dV_dT = hcl.scalar(0, "dV_dT")
 
-                        # Variables to calculate dV_dx
-                        dV_dx_L = hcl.scalar(0, "dV_dx_L")
-                        dV_dx_R = hcl.scalar(0, "dV_dx_R")
-                        dV_dx = hcl.scalar(0, "dV_dx")
-                        # Variables to calculate dV_dy
-                        dV_dy_L = hcl.scalar(0, "dV_dy_L")
-                        dV_dy_R = hcl.scalar(0, "dV_dy_R")
-                        dV_dy = hcl.scalar(0, "dV_dy")
-                        # Variables to calculate dV_dtheta
-                        dV_dT_L = hcl.scalar(0, "dV_dT_L")
-                        dV_dT_R = hcl.scalar(0, "dV_dT_R")
-                        dV_dT = hcl.scalar(0, "dV_dT")
+                            # No tensor slice operation
+                            if accuracy == "low":
+                                dV_dx_L[0], dV_dx_R[0] = spa_derivX(i, j, k, V_init, g)
+                                dV_dy_L[0], dV_dy_R[0] = spa_derivY(i, j, k, V_init, g)
+                                dV_dT_L[0], dV_dT_R[0] = spa_derivT(i, j, k, V_init, g)
+                            if accuracy == "medium":
+                                dV_dx_L[0], dV_dx_R[0] = secondOrderX(i, j, k, V_init, g)
+                                dV_dy_L[0], dV_dy_R[0] = secondOrderY(i, j, k, V_init, g)
+                                dV_dT_L[0], dV_dT_R[0] = secondOrderT(i, j, k, V_init, g)
 
-                        # No tensor slice operation
-                        if accuracy == "low":
-                            dV_dx_L[0], dV_dx_R[0] = spa_derivX(i, j, k, V_init, g)
-                            dV_dy_L[0], dV_dy_R[0] = spa_derivY(i, j, k, V_init, g)
-                            dV_dT_L[0], dV_dT_R[0] = spa_derivT(i, j, k, V_init, g)
-                        if accuracy == "medium":
-                            dV_dx_L[0], dV_dx_R[0] = secondOrderX(i, j, k, V_init, g)
-                            dV_dy_L[0], dV_dy_R[0] = secondOrderY(i, j, k, V_init, g)
-                            dV_dT_L[0], dV_dT_R[0] = secondOrderT(i, j, k, V_init, g)
+                            # Saves spatial derivative diff into tables
+                            deriv_diff1[i, j, k] = dV_dx_R[0] - dV_dx_L[0]
+                            deriv_diff2[i, j, k] = dV_dy_R[0] - dV_dy_L[0]
+                            deriv_diff3[i, j, k] = dV_dT_R[0] - dV_dT_L[0]
 
-                        # Saves spatial derivative diff into tables
-                        deriv_diff1[i, j, k] = dV_dx_R[0] - dV_dx_L[0]
-                        deriv_diff2[i, j, k] = dV_dy_R[0] - dV_dy_L[0]
-                        deriv_diff3[i, j, k] = dV_dT_R[0] - dV_dT_L[0]
+                            # Calculate average gradient
+                            dV_dx[0] = (dV_dx_L + dV_dx_R) / 2
+                            dV_dy[0] = (dV_dy_L + dV_dy_R) / 2
+                            dV_dT[0] = (dV_dT_L + dV_dT_R) / 2
 
-                        # Calculate average gradient
-                        dV_dx[0] = (dV_dx_L + dV_dx_R) / 2
-                        dV_dy[0] = (dV_dy_L + dV_dy_R) / 2
-                        dV_dT[0] = (dV_dT_L + dV_dT_R) / 2
+                            # Use method of DubinsCar to solve optimal control instead
+                            uOpt = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]),
+                                                          (dV_dx[0], dV_dy[0], dV_dT[0]))
+                            dOpt = my_object.opt_dstb(t, (x1[i], x2[j], x3[k]),
+                                                     (dV_dx[0], dV_dy[0], dV_dT[0]))
 
-                        # Use method of DubinsCar to solve optimal control instead
-                        uOpt = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]),
-                                                      (dV_dx[0], dV_dy[0], dV_dT[0]))
-                        dOpt = my_object.opt_dstb(t, (x1[i], x2[j], x3[k]),
-                                                 (dV_dx[0], dV_dy[0], dV_dT[0]))
+                            # Calculate dynamical rates of changes
+                            dx_dt, dy_dt, dtheta_dt = my_object.dynamics(t, (x1[i], x2[j], x3[k]), uOpt, dOpt)
 
-                        # Calculate dynamical rates of changes
-                        dx_dt, dy_dt, dtheta_dt = my_object.dynamics(t, (x1[i], x2[j], x3[k]), uOpt, dOpt)
+                            # Calculate Hamiltonian terms:
+                            V_new[i, j, k] = -(dx_dt * dV_dx[0] + dy_dt * dV_dy[0] + dtheta_dt * dV_dT[0])
 
-                        # Calculate Hamiltonian terms:
-                        V_new[i, j, k] = -(dx_dt * dV_dx[0] + dy_dt * dV_dy[0] + dtheta_dt * dV_dT[0])
+                            # Get derivMin
+                            with hcl.if_(dV_dx_L[0] < min_deriv1[0]):
+                                min_deriv1[0] = dV_dx_L[0]
+                            with hcl.if_(dV_dx_R[0] < min_deriv1[0]):
+                                min_deriv1[0] = dV_dx_R[0]
 
-                        # Get derivMin
-                        with hcl.if_(dV_dx_L[0] < min_deriv1[0]):
-                            min_deriv1[0] = dV_dx_L[0]
-                        with hcl.if_(dV_dx_R[0] < min_deriv1[0]):
-                            min_deriv1[0] = dV_dx_R[0]
+                            with hcl.if_(dV_dy_L[0] < min_deriv2[0]):
+                                min_deriv2[0] = dV_dy_L[0]
+                            with hcl.if_(dV_dy_R[0] < min_deriv2[0]):
+                                min_deriv2[0] = dV_dy_R[0]
 
-                        with hcl.if_(dV_dy_L[0] < min_deriv2[0]):
-                            min_deriv2[0] = dV_dy_L[0]
-                        with hcl.if_(dV_dy_R[0] < min_deriv2[0]):
-                            min_deriv2[0] = dV_dy_R[0]
+                            with hcl.if_(dV_dT_L[0] < min_deriv3[0]):
+                                min_deriv3[0] = dV_dT_L[0]
+                            with hcl.if_(dV_dT_R[0] < min_deriv3[0]):
+                                min_deriv3[0] = dV_dT_R[0]
 
-                        with hcl.if_(dV_dT_L[0] < min_deriv3[0]):
-                            min_deriv3[0] = dV_dT_L[0]
-                        with hcl.if_(dV_dT_R[0] < min_deriv3[0]):
-                            min_deriv3[0] = dV_dT_R[0]
+                            # Get derivMax
+                            with hcl.if_(dV_dx_L[0] > max_deriv1[0]):
+                                max_deriv1[0] = dV_dx_L[0]
+                            with hcl.if_(dV_dx_R[0] > max_deriv1[0]):
+                                max_deriv1[0] = dV_dx_R[0]
 
-                        # Get derivMax
-                        with hcl.if_(dV_dx_L[0] > max_deriv1[0]):
-                            max_deriv1[0] = dV_dx_L[0]
-                        with hcl.if_(dV_dx_R[0] > max_deriv1[0]):
-                            max_deriv1[0] = dV_dx_R[0]
+                            with hcl.if_(dV_dy_L[0] > max_deriv2[0]):
+                                max_deriv2[0] = dV_dy_L[0]
+                            with hcl.if_(dV_dy_R[0] > max_deriv2[0]):
+                                max_deriv2[0] = dV_dy_R[0]
 
-                        with hcl.if_(dV_dy_L[0] > max_deriv2[0]):
-                            max_deriv2[0] = dV_dy_L[0]
-                        with hcl.if_(dV_dy_R[0] > max_deriv2[0]):
-                            max_deriv2[0] = dV_dy_R[0]
-
-                        with hcl.if_(dV_dT_L[0] > max_deriv3[0]):
-                            max_deriv3[0] = dV_dT_L[0]
-                        with hcl.if_(dV_dT_R[0] > max_deriv3[0]):
-                            max_deriv3[0] = dV_dT_R[0]
+                            with hcl.if_(dV_dT_L[0] > max_deriv3[0]):
+                                max_deriv3[0] = dV_dT_L[0]
+                            with hcl.if_(dV_dT_R[0] > max_deriv3[0]):
+                                max_deriv3[0] = dV_dT_R[0]
 
         # Calculate the dissipation
         with hcl.Stage("Dissipation"):
