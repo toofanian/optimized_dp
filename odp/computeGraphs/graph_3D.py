@@ -6,14 +6,13 @@ from odp.spatialDerivatives.second_orderENO3D import *
 
 #from user_definer import *
 #def graph_3D(dynamics_obj, grid):
-def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv_dim=1, active_set=None):
-    if active_set is None:
-        active_set = np.ones(g.pts_each_dim)
+def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv_dim=1):
     V_f = hcl.placeholder(tuple(g.pts_each_dim), name="V_f", dtype=hcl.Float())
     V_init = hcl.placeholder(tuple(g.pts_each_dim), name="V_init", dtype=hcl.Float())
     l0 = hcl.placeholder(tuple(g.pts_each_dim), name="l0", dtype=hcl.Float())
     t = hcl.placeholder((2,), name="t", dtype=hcl.Float())
     probe = hcl.placeholder(tuple(g.pts_each_dim), name="probe", dtype=hcl.Float())
+    active_set_holder = hcl.placeholder(tuple(g.pts_each_dim), name="active_set_holder", dtype=hcl.Int())
 
     # Positions vector
     x1 = hcl.placeholder((g.pts_each_dim[0],), name="x1", dtype=hcl.Float())
@@ -21,8 +20,6 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
     x3 = hcl.placeholder((g.pts_each_dim[2],), name="x3", dtype=hcl.Float())
     def graph_create(V_new, V_init, x1, x2, x3, t, l0, active_set):
         # Specify intermediate tensors
-        active_set_hcl = hcl.compute(V_init.shape, lambda i, j, k: active_set[i, j, k], "active_set")
-
         deriv_diff1 = hcl.compute(V_init.shape, lambda *x: 0, "deriv_diff1")
         deriv_diff2 = hcl.compute(V_init.shape, lambda *x: 0, "deriv_diff2")
         deriv_diff3 = hcl.compute(V_init.shape, lambda *x: 0, "deriv_diff3")
@@ -74,7 +71,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                 with hcl.for_(0, V_init.shape[1], name="j") as j:
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
 
-                        if active_set_hcl[i, j, k] == 0:
+                        with hcl.if_(active_set[i, j, k] == 0):
                             hcl.continue_()
 
                         # Variables to calculate dV_dx
@@ -317,7 +314,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                         Deriv_array[i, j, k] = (dV_dx_L[0] + dV_dx_R[0]) / 2
 
     if generate_SpatDeriv == False:
-        s = hcl.create_schedule([V_f, V_init, x1, x2, x3, t, l0, active_set], graph_create)
+        s = hcl.create_schedule([V_f, V_init, x1, x2, x3, t, l0, active_set_holder], graph_create)
         ##################### CODE OPTIMIZATION HERE ###########################
         print("Optimizing\n")
 
