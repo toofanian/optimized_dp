@@ -1,3 +1,6 @@
+from typing import Callable
+
+import attr
 import heterocl as hcl
 import numpy as np
 import time
@@ -78,192 +81,199 @@ def solveValueIteration(MDP_obj):
     # MDP_obj.writeResults(V, dir_path, file_name, just_values=True)
     return V
 
-def HJSolver(
-        dynamics_obj,
-        grid,
-        multiple_value,
-        tau,
-        compMethod,
-        plot_option,
-        saveAllTimeSteps=False,
-        accuracy="low",
-        untilConvergent=False,
-        epsilon=2e-3,
-        active_set=None
-):
-    if active_set is None:
-        active_set = np.ones(grid.points_each_dim, dtype=bool)
-    active_set = hcl.asarray(np.array(active_set))
 
-    print("Welcome to optimized_dp \n")
-    if type(multiple_value) == list:
-        # We have both goal and obstacle set
-        target = multiple_value[0] # Target set
-        constraint = multiple_value[1] # Obstacle set
-    else:
-        target = multiple_value
-        constraint = None
-    
-    hcl.init()
-    hcl.config.init_dtype = hcl.Float(32)
+@attr.s(auto_attribs=True)
+class HjSolver:
+    solve_pde: Callable = None
 
-    ################# INITIALIZE DATA TO BE INPUT INTO EXECUTABLE ##########################
+    def __call__(
+            self,
+            dynamics_obj,
+            grid,
+            multiple_value,
+            tau,
+            compMethod,
+            plot_option,
+            saveAllTimeSteps=False,
+            accuracy="low",
+            untilConvergent=False,
+            epsilon=2e-3,
+            active_set=None
+    ):
+        if active_set is None:
+            active_set = np.ones(grid.points_each_dim, dtype=bool)
+        active_set = hcl.asarray(np.array(active_set))
 
-    print("Initializing\n")
-
-    if constraint is None:
-        print("No obstacles set !")
-        init_value = target
-    else: 
-        print("Obstacles set exists !")
-        constraint_dim = constraint.ndim
-
-        # Time-varying obstacle sets
-        if constraint_dim > grid.dims:
-            constraint_i = constraint[...,0]
+        print("Welcome to optimized_dp \n")
+        if type(multiple_value) == list:
+            # We have both goal and obstacle set
+            target = multiple_value[0] # Target set
+            constraint = multiple_value[1] # Obstacle set
         else:
-            # Time-invariant obstacle set
-            constraint_i = constraint
+            target = multiple_value
+            constraint = None
 
-        init_value = np.maximum(target, -constraint_i)
+        hcl.init()
+        hcl.config.init_dtype = hcl.Float(32)
 
-    # Tensors input to our computation graph
-    V_0 = hcl.asarray(init_value)
-    V_1 = hcl.asarray(np.zeros(tuple(grid.pts_each_dim)))
+        ################# INITIALIZE DATA TO BE INPUT INTO EXECUTABLE ##########################
 
-    # Check which target set or initial value set
-    if compMethod["TargetSetMode"] != "minVWithVTarget" and compMethod["TargetSetMode"] != "maxVWithVTarget":
-        l0 = hcl.asarray(init_value)
-    else:
-        l0 = hcl.asarray(target)
+        print("Initializing\n")
 
-    # For debugging purposes
-    probe = hcl.asarray(np.zeros(tuple(grid.pts_each_dim)))
+        if constraint is None:
+            print("No obstacles set !")
+            init_value = target
+        else:
+            print("Obstacles set exists !")
+            constraint_dim = constraint.ndim
 
-    # Array for each state values
-    list_x1 = np.reshape(grid.vs[0], grid.pts_each_dim[0])
-    list_x2 = np.reshape(grid.vs[1], grid.pts_each_dim[1])
-    list_x3 = np.reshape(grid.vs[2], grid.pts_each_dim[2])
-    if grid.dims >= 4:
-        list_x4 = np.reshape(grid.vs[3], grid.pts_each_dim[3])
-    if grid.dims >= 5:
-        list_x5 = np.reshape(grid.vs[4], grid.pts_each_dim[4])
-    if grid.dims >= 6:
-        list_x6 = np.reshape(grid.vs[5], grid.pts_each_dim[5])
+            # Time-varying obstacle sets
+            if constraint_dim > grid.dims:
+                constraint_i = constraint[...,0]
+            else:
+                # Time-invariant obstacle set
+                constraint_i = constraint
 
-    # Convert state arrays to hcl array type
-    list_x1 = hcl.asarray(list_x1)
-    list_x2 = hcl.asarray(list_x2)
-    list_x3 = hcl.asarray(list_x3)
-    if grid.dims >= 4:
-        list_x4 = hcl.asarray(list_x4)
-    if grid.dims >= 5:
-        list_x5 = hcl.asarray(list_x5)
-    if grid.dims >= 6:
-        list_x6 = hcl.asarray(list_x6)
+            init_value = np.maximum(target, -constraint_i)
 
-    # Get executable, obstacle check intial value function
-    if grid.dims == 3:
-        solve_pde = graph_3D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
+        # Tensors input to our computation graph
+        V_0 = hcl.asarray(init_value)
+        V_1 = hcl.asarray(np.zeros(tuple(grid.pts_each_dim)))
 
-    if grid.dims == 4:
-        solve_pde = graph_4D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
+        # Check which target set or initial value set
+        if compMethod["TargetSetMode"] != "minVWithVTarget" and compMethod["TargetSetMode"] != "maxVWithVTarget":
+            l0 = hcl.asarray(init_value)
+        else:
+            l0 = hcl.asarray(target)
 
-    if grid.dims == 5:
-        solve_pde = graph_5D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
+        # For debugging purposes
+        probe = hcl.asarray(np.zeros(tuple(grid.pts_each_dim)))
 
-    if grid.dims == 6:
-        solve_pde = graph_6D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
+        # Array for each state values
+        list_x1 = np.reshape(grid.vs[0], grid.pts_each_dim[0])
+        list_x2 = np.reshape(grid.vs[1], grid.pts_each_dim[1])
+        list_x3 = np.reshape(grid.vs[2], grid.pts_each_dim[2])
+        if grid.dims >= 4:
+            list_x4 = np.reshape(grid.vs[3], grid.pts_each_dim[3])
+        if grid.dims >= 5:
+            list_x5 = np.reshape(grid.vs[4], grid.pts_each_dim[4])
+        if grid.dims >= 6:
+            list_x6 = np.reshape(grid.vs[5], grid.pts_each_dim[5])
 
-    """ Be careful, for high-dimensional array (5D or higher), saving value arrays at all the time steps may 
-    cause your computer to run out of memory """
-    if saveAllTimeSteps is True:
-        valfuncs = np.zeros(np.insert(tuple(grid.pts_each_dim), grid.dims, len(tau)))
-        valfuncs[..., -1 ] = V_0.asnumpy()
-        print(valfuncs.shape)
+        # Convert state arrays to hcl array type
+        list_x1 = hcl.asarray(list_x1)
+        list_x2 = hcl.asarray(list_x2)
+        list_x3 = hcl.asarray(list_x3)
+        if grid.dims >= 4:
+            list_x4 = hcl.asarray(list_x4)
+        if grid.dims >= 5:
+            list_x5 = hcl.asarray(list_x5)
+        if grid.dims >= 6:
+            list_x6 = hcl.asarray(list_x6)
 
-
-    ################ USE THE EXECUTABLE ############
-    # Variables used for timing
-    execution_time = 0
-    iter = 0
-    tNow = tau[0]
-    print("Started running\n")
-
-    # Backward reachable set/tube will be computed over the specified time horizon
-    # Or until convergent ( which ever happens first )
-    for i in range (1, len(tau)):
-        #tNow = tau[i-1]
-        t_minh= hcl.asarray(np.array((tNow, tau[i])))
-        
-        # taking obstacle at each timestep
-        if "ObstacleSetMode" in compMethod and constraint_dim > grid.dims:
-            constraint_i = constraint[...,i]
-
-        while tNow <= tau[i] - 1e-4:
-            prev_arr = V_0.asnumpy()
-            # Start timing
-            iter += 1
-            start = time.time()
-
-            # Run the execution and pass input into graph
+        # Get executable, obstacle check intial value function
+        if self.solve_pde is None:
             if grid.dims == 3:
-                solve_pde(V_1, V_0, list_x1, list_x2, list_x3, t_minh, l0, active_set)
+                self.solve_pde = graph_3D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
+
             if grid.dims == 4:
-                solve_pde(V_1, V_0, list_x1, list_x2, list_x3, list_x4, t_minh, l0, probe)
+                self.solve_pde = graph_4D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
+
             if grid.dims == 5:
-                solve_pde(V_1, V_0, list_x1, list_x2, list_x3, list_x4, list_x5 ,t_minh, l0)
+                self.solve_pde = graph_5D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
+
             if grid.dims == 6:
-                solve_pde(V_1, V_0, list_x1, list_x2, list_x3, list_x4, list_x5, list_x6, t_minh, l0)
+                self.solve_pde = graph_6D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
 
-            tNow = t_minh.asnumpy()[0]
-
-            # Calculate computation time
-            execution_time += time.time() - start
-
-            # If ObstacleSetMode is specified by user
-            if "ObstacleSetMode" in compMethod:
-                if compMethod["ObstacleSetMode"] == "maxVWithObstacle":
-                    tmp_val = np.maximum(V_0.asnumpy(), -constraint_i)
-                elif compMethod["ObstacleSetMode"] == "minVWithObstacle":
-                    tmp_val = np.minimum(V_0.asnumpy(), -constraint_i)
-                # Update final result
-                V_1 = hcl.asarray(tmp_val)
-                # Update input for next iteration
-                V_0 = hcl.asarray(tmp_val)
-
-            # Some information printin
-            print(t_minh)
-            print("Computational time to integrate (s): {:.5f}".format(time.time() - start))
-
-            if untilConvergent is True:
-                # Compare difference between V_{t-1} and V_{t} and choose the max changes
-                diff = np.amax(np.abs(V_1.asnumpy() - prev_arr))
-                print("Max difference between V_old and V_new : {:.5f}".format(diff))
-                if diff < epsilon:
-                    print("Result converged ! Exiting the compute loop. Have a good day.")
-                    break
-        else: # if it didn't break because of convergent condition
-            if saveAllTimeSteps is True:
-                valfuncs[..., -1-i] = V_1.asnumpy()
-            continue
-        break # only if convergent condition is achieved
+        """ Be careful, for high-dimensional array (5D or higher), saving value arrays at all the time steps may 
+        cause your computer to run out of memory """
+        if saveAllTimeSteps is True:
+            valfuncs = np.zeros(np.insert(tuple(grid.pts_each_dim), grid.dims, len(tau)))
+            valfuncs[..., -1 ] = V_0.asnumpy()
+            print(valfuncs.shape)
 
 
-    # Time info printing
-    print("Total kernel time (s): {:.5f}".format(execution_time))
-    print("Finished solving\n")
+        ################ USE THE EXECUTABLE ############
+        # Variables used for timing
+        execution_time = 0
+        iter = 0
+        tNow = tau[0]
+        print("Started running\n")
 
-    ##################### PLOTTING #####################
-    if plot_option.do_plot :
-        # Only plots last value array for now
-        plot_isosurface(grid, V_1.asnumpy(), plot_option)
+        # Backward reachable set/tube will be computed over the specified time horizon
+        # Or until convergent ( which ever happens first )
+        for i in range (1, len(tau)):
+            #tNow = tau[i-1]
+            t_minh= hcl.asarray(np.array((tNow, tau[i])))
 
-    if saveAllTimeSteps is True:
-        valfuncs[..., 0] = V_1.asnumpy()
-        return valfuncs
+            # taking obstacle at each timestep
+            if "ObstacleSetMode" in compMethod and constraint_dim > grid.dims:
+                constraint_i = constraint[...,i]
 
-    return V_1.asnumpy()
+            while tNow <= tau[i] - 1e-4:
+                prev_arr = V_0.asnumpy()
+                # Start timing
+                iter += 1
+                start = time.time()
+
+                # Run the execution and pass input into graph
+                if grid.dims == 3:
+                    self.solve_pde(V_1, V_0, list_x1, list_x2, list_x3, t_minh, l0, active_set)
+                if grid.dims == 4:
+                    self.solve_pde(V_1, V_0, list_x1, list_x2, list_x3, list_x4, t_minh, l0, probe)
+                if grid.dims == 5:
+                    self.solve_pde(V_1, V_0, list_x1, list_x2, list_x3, list_x4, list_x5 ,t_minh, l0)
+                if grid.dims == 6:
+                    self.solve_pde(V_1, V_0, list_x1, list_x2, list_x3, list_x4, list_x5, list_x6, t_minh, l0)
+
+                tNow = t_minh.asnumpy()[0]
+
+                # Calculate computation time
+                execution_time += time.time() - start
+
+                # If ObstacleSetMode is specified by user
+                if "ObstacleSetMode" in compMethod:
+                    if compMethod["ObstacleSetMode"] == "maxVWithObstacle":
+                        tmp_val = np.maximum(V_0.asnumpy(), -constraint_i)
+                    elif compMethod["ObstacleSetMode"] == "minVWithObstacle":
+                        tmp_val = np.minimum(V_0.asnumpy(), -constraint_i)
+                    # Update final result
+                    V_1 = hcl.asarray(tmp_val)
+                    # Update input for next iteration
+                    V_0 = hcl.asarray(tmp_val)
+
+                # Some information printin
+                print(t_minh)
+                print("Computational time to integrate (s): {:.5f}".format(time.time() - start))
+
+                if untilConvergent is True:
+                    # Compare difference between V_{t-1} and V_{t} and choose the max changes
+                    diff = np.amax(np.abs(V_1.asnumpy() - prev_arr))
+                    print("Max difference between V_old and V_new : {:.5f}".format(diff))
+                    if diff < epsilon:
+                        print("Result converged ! Exiting the compute loop. Have a good day.")
+                        break
+            else: # if it didn't break because of convergent condition
+                if saveAllTimeSteps is True:
+                    valfuncs[..., -1-i] = V_1.asnumpy()
+                continue
+            break # only if convergent condition is achieved
+
+
+        # Time info printing
+        print("Total kernel time (s): {:.5f}".format(execution_time))
+        print("Finished solving\n")
+
+        ##################### PLOTTING #####################
+        if plot_option.do_plot :
+            # Only plots last value array for now
+            plot_isosurface(grid, V_1.asnumpy(), plot_option)
+
+        if saveAllTimeSteps is True:
+            valfuncs[..., 0] = V_1.asnumpy()
+            return valfuncs
+
+        return V_1.asnumpy()
 
 def TTRSolver(dynamics_obj, grid, init_value, epsilon, plot_option):
     print("Welcome to optimized_dp \n")
