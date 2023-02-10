@@ -101,8 +101,8 @@ class HjSolver:
             active_set=None
     ):
         if active_set is None:
-            active_set = np.ones(grid.points_each_dim, dtype=bool)
-        active_set = hcl.asarray(np.array(active_set))
+            active_set = np.ones(grid.points_each_dim, dtype=int)
+        active_set = hcl.asarray(np.array(active_set).astype(int))
 
         print("Welcome to optimized_dp \n")
         if type(multiple_value) == list:
