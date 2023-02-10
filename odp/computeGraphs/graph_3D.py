@@ -11,7 +11,6 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
     V_init = hcl.placeholder(tuple(g.pts_each_dim), name="V_init", dtype=hcl.Float())
     l0 = hcl.placeholder(tuple(g.pts_each_dim), name="l0", dtype=hcl.Float())
     t = hcl.placeholder((2,), name="t", dtype=hcl.Float())
-    probe = hcl.placeholder(tuple(g.pts_each_dim), name="probe", dtype=hcl.Float())
     active_set_holder = hcl.placeholder(tuple(g.pts_each_dim), name="active_set_holder", dtype=hcl.Int())
 
     # Positions vector

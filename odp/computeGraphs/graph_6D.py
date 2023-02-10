@@ -11,6 +11,8 @@ def graph_6D(my_object, g, compMethod, accuracy):
     V_init = hcl.placeholder(tuple(g.pts_each_dim), name="V_init", dtype=hcl.Float())
     l0 = hcl.placeholder(tuple(g.pts_each_dim), name="l0", dtype=hcl.Float())
     t = hcl.placeholder((2,), name="t", dtype=hcl.Float())
+    active_set_holder = hcl.placeholder(tuple(g.pts_each_dim), name="active_set_holder", dtype=hcl.Int())
+
 
     # Positions vector
     x1 = hcl.placeholder((g.pts_each_dim[0],), name="x1", dtype=hcl.Float())
@@ -20,7 +22,7 @@ def graph_6D(my_object, g, compMethod, accuracy):
     x5 = hcl.placeholder((g.pts_each_dim[4],), name="x5", dtype=hcl.Float())
     x6 = hcl.placeholder((g.pts_each_dim[5],), name="x6", dtype=hcl.Float())
 
-    def graph_create(V_new, V_init, x1, x2, x3, x4, x5, x6, t, l0):
+    def graph_create(V_new, V_init, x1, x2, x3, x4, x5, x6, t, l0, active_set):
         # Specify intermediate tensors
         deriv_diff1 = hcl.compute(V_init.shape, lambda *x: 0, "deriv_diff1")
         deriv_diff2 = hcl.compute(V_init.shape, lambda *x: 0, "deriv_diff2")
@@ -95,136 +97,138 @@ def graph_6D(my_object, g, compMethod, accuracy):
                         with hcl.for_(0, V_init.shape[3], name="l") as l:
                             with hcl.for_(0, V_init.shape[4], name="m") as m:
                                 with hcl.for_(0, V_init.shape[5], name="n") as n:
-                                    # Variables to calculate dV_dx
-                                    dV_dx1_L = hcl.scalar(0, "dV_dx1_L")
-                                    dV_dx1_R = hcl.scalar(0, "dV_dx1_R")
-                                    dV_dx1 = hcl.scalar(0, "dV_dx1")
-                                    dV_dx2_L = hcl.scalar(0, "dV_dx2_L")
-                                    dV_dx2_R = hcl.scalar(0, "dV_dx2_R")
-                                    dV_dx2 = hcl.scalar(0, "dV_dx2")
-                                    dV_dx3_L = hcl.scalar(0, "dV_dx3_L")
-                                    dV_dx3_R = hcl.scalar(0, "dV_dx3_R")
-                                    dV_dx3 = hcl.scalar(0, "dV_dx3")
-                                    dV_dx4_L = hcl.scalar(0, "dV_dx4_L")
-                                    dV_dx4_R = hcl.scalar(0, "dV_dx4_R")
-                                    dV_dx4 = hcl.scalar(0, "dV_dx4")
-                                    dV_dx5_L = hcl.scalar(0, "dV_dx5_L")
-                                    dV_dx5_R = hcl.scalar(0, "dV_dx5_R")
-                                    dV_dx5 = hcl.scalar(0, "dV_dx5")
-                                    dV_dx6_L = hcl.scalar(0, "dV_dx6_L")
-                                    dV_dx6_R = hcl.scalar(0, "dV_dx6_R")
-                                    dV_dx6 = hcl.scalar(0, "dV_dx6")
+                                    with hcl.if_(active_set[i, j, k, l, m, n] == 1):
 
-                                    # No tensor slice operation
-                                    # dV_dx_L[0], dV_dx_R[0] = spa_derivX(i, j, k)
-                                    if accuracy == "low":
-                                        dV_dx1_L[0], dV_dx1_R[0] = spa_derivX1_6d(i, j, k, l, m, n, V_init, g)
-                                        dV_dx2_L[0], dV_dx2_R[0] = spa_derivX2_6d(i, j, k, l, m, n, V_init, g)
-                                        dV_dx3_L[0], dV_dx3_R[0] = spa_derivX3_6d(i, j, k, l, m, n, V_init, g)
-                                        dV_dx4_L[0], dV_dx4_R[0] = spa_derivX4_6d(i, j, k, l, m, n, V_init, g)
-                                        dV_dx5_L[0], dV_dx5_R[0] = spa_derivX5_6d(i, j, k, l, m, n, V_init, g)
-                                        dV_dx6_L[0], dV_dx6_R[0] = spa_derivX6_6d(i, j, k, l, m, n, V_init, g)
-                                    if accuracy == "high":
-                                        dV_dx1_L[0], dV_dx1_R[0] = secondOrderX1_6d(i, j, k, l, m, n, V_init, g)
-                                        dV_dx2_L[0], dV_dx2_R[0] = secondOrderX2_6d(i, j, k, l, m, n, V_init, g)
-                                        dV_dx3_L[0], dV_dx3_R[0] = secondOrderX3_6d(i, j, k, l, m, n, V_init, g)
-                                        dV_dx4_L[0], dV_dx4_R[0] = secondOrderX4_6d(i, j, k, l, m, n, V_init, g)
-                                        dV_dx5_L[0], dV_dx5_R[0] = secondOrderX5_6d(i, j, k, l, m, n, V_init, g)
-                                        dV_dx6_L[0], dV_dx6_R[0] = secondOrderX6_6d(i, j, k, l, m, n, V_init, g)
+                                        # Variables to calculate dV_dx
+                                        dV_dx1_L = hcl.scalar(0, "dV_dx1_L")
+                                        dV_dx1_R = hcl.scalar(0, "dV_dx1_R")
+                                        dV_dx1 = hcl.scalar(0, "dV_dx1")
+                                        dV_dx2_L = hcl.scalar(0, "dV_dx2_L")
+                                        dV_dx2_R = hcl.scalar(0, "dV_dx2_R")
+                                        dV_dx2 = hcl.scalar(0, "dV_dx2")
+                                        dV_dx3_L = hcl.scalar(0, "dV_dx3_L")
+                                        dV_dx3_R = hcl.scalar(0, "dV_dx3_R")
+                                        dV_dx3 = hcl.scalar(0, "dV_dx3")
+                                        dV_dx4_L = hcl.scalar(0, "dV_dx4_L")
+                                        dV_dx4_R = hcl.scalar(0, "dV_dx4_R")
+                                        dV_dx4 = hcl.scalar(0, "dV_dx4")
+                                        dV_dx5_L = hcl.scalar(0, "dV_dx5_L")
+                                        dV_dx5_R = hcl.scalar(0, "dV_dx5_R")
+                                        dV_dx5 = hcl.scalar(0, "dV_dx5")
+                                        dV_dx6_L = hcl.scalar(0, "dV_dx6_L")
+                                        dV_dx6_R = hcl.scalar(0, "dV_dx6_R")
+                                        dV_dx6 = hcl.scalar(0, "dV_dx6")
 
-                                    # Saves spatial derivative diff into tables
-                                    deriv_diff1[i, j, k, l, m, n] = dV_dx1_R[0] - dV_dx1_L[0]
-                                    deriv_diff2[i, j, k, l, m, n] = dV_dx2_R[0] - dV_dx2_L[0]
-                                    deriv_diff3[i, j, k, l, m, n] = dV_dx3_R[0] - dV_dx3_L[0]
-                                    deriv_diff4[i, j, k, l, m, n] = dV_dx4_R[0] - dV_dx4_L[0]
-                                    deriv_diff5[i, j, k, l, m, n] = dV_dx5_R[0] - dV_dx5_L[0]
-                                    deriv_diff6[i, j, k, l, m, n] = dV_dx6_R[0] - dV_dx6_L[0]
+                                        # No tensor slice operation
+                                        # dV_dx_L[0], dV_dx_R[0] = spa_derivX(i, j, k)
+                                        if accuracy == "low":
+                                            dV_dx1_L[0], dV_dx1_R[0] = spa_derivX1_6d(i, j, k, l, m, n, V_init, g)
+                                            dV_dx2_L[0], dV_dx2_R[0] = spa_derivX2_6d(i, j, k, l, m, n, V_init, g)
+                                            dV_dx3_L[0], dV_dx3_R[0] = spa_derivX3_6d(i, j, k, l, m, n, V_init, g)
+                                            dV_dx4_L[0], dV_dx4_R[0] = spa_derivX4_6d(i, j, k, l, m, n, V_init, g)
+                                            dV_dx5_L[0], dV_dx5_R[0] = spa_derivX5_6d(i, j, k, l, m, n, V_init, g)
+                                            dV_dx6_L[0], dV_dx6_R[0] = spa_derivX6_6d(i, j, k, l, m, n, V_init, g)
+                                        if accuracy == "high":
+                                            dV_dx1_L[0], dV_dx1_R[0] = secondOrderX1_6d(i, j, k, l, m, n, V_init, g)
+                                            dV_dx2_L[0], dV_dx2_R[0] = secondOrderX2_6d(i, j, k, l, m, n, V_init, g)
+                                            dV_dx3_L[0], dV_dx3_R[0] = secondOrderX3_6d(i, j, k, l, m, n, V_init, g)
+                                            dV_dx4_L[0], dV_dx4_R[0] = secondOrderX4_6d(i, j, k, l, m, n, V_init, g)
+                                            dV_dx5_L[0], dV_dx5_R[0] = secondOrderX5_6d(i, j, k, l, m, n, V_init, g)
+                                            dV_dx6_L[0], dV_dx6_R[0] = secondOrderX6_6d(i, j, k, l, m, n, V_init, g)
 
-                                    # Calculate average gradient
-                                    dV_dx1[0] = (dV_dx1_L + dV_dx1_R) / 2
-                                    dV_dx2[0] = (dV_dx2_L + dV_dx2_R) / 2
-                                    dV_dx3[0] = (dV_dx3_L + dV_dx3_R) / 2
-                                    dV_dx4[0] = (dV_dx4_L + dV_dx4_R) / 2
-                                    dV_dx5[0] = (dV_dx5_L + dV_dx5_R) / 2
-                                    dV_dx6[0] = (dV_dx6_L + dV_dx6_R) / 2
+                                        # Saves spatial derivative diff into tables
+                                        deriv_diff1[i, j, k, l, m, n] = dV_dx1_R[0] - dV_dx1_L[0]
+                                        deriv_diff2[i, j, k, l, m, n] = dV_dx2_R[0] - dV_dx2_L[0]
+                                        deriv_diff3[i, j, k, l, m, n] = dV_dx3_R[0] - dV_dx3_L[0]
+                                        deriv_diff4[i, j, k, l, m, n] = dV_dx4_R[0] - dV_dx4_L[0]
+                                        deriv_diff5[i, j, k, l, m, n] = dV_dx5_R[0] - dV_dx5_L[0]
+                                        deriv_diff6[i, j, k, l, m, n] = dV_dx6_R[0] - dV_dx6_L[0]
 
-                                    # Find optimal control
-                                    uOpt = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (
-                                    dV_dx1[0], dV_dx2[0], dV_dx3[0], dV_dx4[0], dV_dx5[0], dV_dx6[0]))
-                                    # Find optimal disturbance
-                                    dOpt = my_object.opt_dstb(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (
-                                    dV_dx1[0], dV_dx2[0], dV_dx3[0], dV_dx4[0], dV_dx5[0], dV_dx6[0]))
+                                        # Calculate average gradient
+                                        dV_dx1[0] = (dV_dx1_L + dV_dx1_R) / 2
+                                        dV_dx2[0] = (dV_dx2_L + dV_dx2_R) / 2
+                                        dV_dx3[0] = (dV_dx3_L + dV_dx3_R) / 2
+                                        dV_dx4[0] = (dV_dx4_L + dV_dx4_R) / 2
+                                        dV_dx5[0] = (dV_dx5_L + dV_dx5_R) / 2
+                                        dV_dx6[0] = (dV_dx6_L + dV_dx6_R) / 2
 
-                                    # Find rates of changes based on dynamics equation
-                                    dx1_dt, dx2_dt, dx3_dt, dx4_dt, dx5_dt, dx6_dt = my_object.dynamics(t, (
-                                    x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), uOpt, dOpt)
+                                        # Find optimal control
+                                        uOpt = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (
+                                        dV_dx1[0], dV_dx2[0], dV_dx3[0], dV_dx4[0], dV_dx5[0], dV_dx6[0]))
+                                        # Find optimal disturbance
+                                        dOpt = my_object.opt_dstb(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (
+                                        dV_dx1[0], dV_dx2[0], dV_dx3[0], dV_dx4[0], dV_dx5[0], dV_dx6[0]))
 
-                                    # Calculate Hamiltonian terms:
-                                    V_new[i, j, k, l, m, n] = -(
-                                                dx1_dt * dV_dx1[0] + dx2_dt * dV_dx2[0] + dx3_dt * dV_dx3[0] + dx4_dt *
-                                                dV_dx4[0] + dx5_dt * dV_dx5[0] + dx6_dt * dV_dx6[0])
+                                        # Find rates of changes based on dynamics equation
+                                        dx1_dt, dx2_dt, dx3_dt, dx4_dt, dx5_dt, dx6_dt = my_object.dynamics(t, (
+                                        x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), uOpt, dOpt)
 
-                                    # Get derivMin
-                                    with hcl.if_(dV_dx1_L[0] < min_deriv1[0]):
-                                        min_deriv1[0] = dV_dx1_L[0]
-                                    with hcl.if_(dV_dx1_R[0] < min_deriv1[0]):
-                                        min_deriv1[0] = dV_dx1_R[0]
+                                        # Calculate Hamiltonian terms:
+                                        V_new[i, j, k, l, m, n] = -(
+                                                    dx1_dt * dV_dx1[0] + dx2_dt * dV_dx2[0] + dx3_dt * dV_dx3[0] + dx4_dt *
+                                                    dV_dx4[0] + dx5_dt * dV_dx5[0] + dx6_dt * dV_dx6[0])
 
-                                    with hcl.if_(dV_dx2_L[0] < min_deriv2[0]):
-                                        min_deriv2[0] = dV_dx2_L[0]
-                                    with hcl.if_(dV_dx2_R[0] < min_deriv2[0]):
-                                        min_deriv2[0] = dV_dx2_R[0]
+                                        # Get derivMin
+                                        with hcl.if_(dV_dx1_L[0] < min_deriv1[0]):
+                                            min_deriv1[0] = dV_dx1_L[0]
+                                        with hcl.if_(dV_dx1_R[0] < min_deriv1[0]):
+                                            min_deriv1[0] = dV_dx1_R[0]
 
-                                    with hcl.if_(dV_dx3_L[0] < min_deriv3[0]):
-                                        min_deriv3[0] = dV_dx3_L[0]
-                                    with hcl.if_(dV_dx3_R[0] < min_deriv3[0]):
-                                        min_deriv3[0] = dV_dx3_R[0]
+                                        with hcl.if_(dV_dx2_L[0] < min_deriv2[0]):
+                                            min_deriv2[0] = dV_dx2_L[0]
+                                        with hcl.if_(dV_dx2_R[0] < min_deriv2[0]):
+                                            min_deriv2[0] = dV_dx2_R[0]
 
-                                    with hcl.if_(dV_dx4_L[0] < min_deriv4[0]):
-                                        min_deriv4[0] = dV_dx4_L[0]
-                                    with hcl.if_(dV_dx4_R[0] < min_deriv4[0]):
-                                        min_deriv4[0] = dV_dx4_R[0]
+                                        with hcl.if_(dV_dx3_L[0] < min_deriv3[0]):
+                                            min_deriv3[0] = dV_dx3_L[0]
+                                        with hcl.if_(dV_dx3_R[0] < min_deriv3[0]):
+                                            min_deriv3[0] = dV_dx3_R[0]
 
-                                    with hcl.if_(dV_dx5_L[0] < min_deriv5[0]):
-                                        min_deriv5[0] = dV_dx5_L[0]
-                                    with hcl.if_(dV_dx5_R[0] < min_deriv5[0]):
-                                        min_deriv5[0] = dV_dx5_R[0]
+                                        with hcl.if_(dV_dx4_L[0] < min_deriv4[0]):
+                                            min_deriv4[0] = dV_dx4_L[0]
+                                        with hcl.if_(dV_dx4_R[0] < min_deriv4[0]):
+                                            min_deriv4[0] = dV_dx4_R[0]
 
-                                    with hcl.if_(dV_dx6_L[0] < min_deriv6[0]):
-                                        min_deriv6[0] = dV_dx6_L[0]
-                                    with hcl.if_(dV_dx6_R[0] < min_deriv6[0]):
-                                        min_deriv6[0] = dV_dx6_R[0]
+                                        with hcl.if_(dV_dx5_L[0] < min_deriv5[0]):
+                                            min_deriv5[0] = dV_dx5_L[0]
+                                        with hcl.if_(dV_dx5_R[0] < min_deriv5[0]):
+                                            min_deriv5[0] = dV_dx5_R[0]
 
-                                    # Get derivMax
-                                    with hcl.if_(dV_dx1_L[0] > max_deriv1[0]):
-                                        max_deriv1[0] = dV_dx1_L[0]
-                                    with hcl.if_(dV_dx1_R[0] > max_deriv1[0]):
-                                        max_deriv1[0] = dV_dx1_R[0]
+                                        with hcl.if_(dV_dx6_L[0] < min_deriv6[0]):
+                                            min_deriv6[0] = dV_dx6_L[0]
+                                        with hcl.if_(dV_dx6_R[0] < min_deriv6[0]):
+                                            min_deriv6[0] = dV_dx6_R[0]
 
-                                    with hcl.if_(dV_dx2_L[0] > max_deriv2[0]):
-                                        max_deriv2[0] = dV_dx2_L[0]
-                                    with hcl.if_(dV_dx2_R[0] > max_deriv2[0]):
-                                        max_deriv2[0] = dV_dx2_R[0]
+                                        # Get derivMax
+                                        with hcl.if_(dV_dx1_L[0] > max_deriv1[0]):
+                                            max_deriv1[0] = dV_dx1_L[0]
+                                        with hcl.if_(dV_dx1_R[0] > max_deriv1[0]):
+                                            max_deriv1[0] = dV_dx1_R[0]
 
-                                    with hcl.if_(dV_dx3_L[0] > max_deriv3[0]):
-                                        max_deriv3[0] = dV_dx3_L[0]
-                                    with hcl.if_(dV_dx3_R[0] > max_deriv3[0]):
-                                        max_deriv3[0] = dV_dx3_R[0]
+                                        with hcl.if_(dV_dx2_L[0] > max_deriv2[0]):
+                                            max_deriv2[0] = dV_dx2_L[0]
+                                        with hcl.if_(dV_dx2_R[0] > max_deriv2[0]):
+                                            max_deriv2[0] = dV_dx2_R[0]
 
-                                    with hcl.if_(dV_dx4_L[0] > max_deriv4[0]):
-                                        max_deriv4[0] = dV_dx4_L[0]
-                                    with hcl.if_(dV_dx4_R[0] > max_deriv4[0]):
-                                        max_deriv4[0] = dV_dx4_R[0]
+                                        with hcl.if_(dV_dx3_L[0] > max_deriv3[0]):
+                                            max_deriv3[0] = dV_dx3_L[0]
+                                        with hcl.if_(dV_dx3_R[0] > max_deriv3[0]):
+                                            max_deriv3[0] = dV_dx3_R[0]
 
-                                    with hcl.if_(dV_dx5_L[0] > max_deriv5[0]):
-                                        max_deriv5[0] = dV_dx5_L[0]
-                                    with hcl.if_(dV_dx5_R[0] > max_deriv5[0]):
-                                        max_deriv5[0] = dV_dx5_R[0]
+                                        with hcl.if_(dV_dx4_L[0] > max_deriv4[0]):
+                                            max_deriv4[0] = dV_dx4_L[0]
+                                        with hcl.if_(dV_dx4_R[0] > max_deriv4[0]):
+                                            max_deriv4[0] = dV_dx4_R[0]
 
-                                    with hcl.if_(dV_dx6_L[0] > max_deriv6[0]):
-                                        max_deriv6[0] = dV_dx6_L[0]
-                                    with hcl.if_(dV_dx6_R[0] > max_deriv6[0]):
-                                        max_deriv6[0] = dV_dx6_R[0]
+                                        with hcl.if_(dV_dx5_L[0] > max_deriv5[0]):
+                                            max_deriv5[0] = dV_dx5_L[0]
+                                        with hcl.if_(dV_dx5_R[0] > max_deriv5[0]):
+                                            max_deriv5[0] = dV_dx5_R[0]
+
+                                        with hcl.if_(dV_dx6_L[0] > max_deriv6[0]):
+                                            max_deriv6[0] = dV_dx6_L[0]
+                                        with hcl.if_(dV_dx6_R[0] > max_deriv6[0]):
+                                            max_deriv6[0] = dV_dx6_R[0]
 
         # Calculate dissipation amount
         with hcl.Stage("Dissipation"):
@@ -278,134 +282,136 @@ def graph_6D(my_object, g, compMethod, accuracy):
                         with hcl.for_(0, V_init.shape[3], name="l") as l:
                             with hcl.for_(0, V_init.shape[4], name="m") as m:
                                 with hcl.for_(0, V_init.shape[5], name="n") as n:
-                                    dx_LL1 = hcl.scalar(0, "dx_LL1")
-                                    dx_LL2 = hcl.scalar(0, "dx_LL2")
-                                    dx_LL3 = hcl.scalar(0, "dx_LL3")
-                                    dx_LL4 = hcl.scalar(0, "dx_LL4")
-                                    dx_LL5 = hcl.scalar(0, "dx_LL5")
-                                    dx_LL6 = hcl.scalar(0, "dx_LL6")
+                                    with hcl.if_(active_set[i, j, k, l, m, n] == 1):
 
-                                    dx_UL1 = hcl.scalar(0, "dx_UL1")
-                                    dx_UL2 = hcl.scalar(0, "dx_UL2")
-                                    dx_UL3 = hcl.scalar(0, "dx_UL3")
-                                    dx_UL4 = hcl.scalar(0, "dx_UL4")
-                                    dx_UL5 = hcl.scalar(0, "dx_UL5")
-                                    dx_UL6 = hcl.scalar(0, "dx_UL6")
-                                    #
-                                    dx_LU1 = hcl.scalar(0, "dx_LU1")
-                                    dx_LU2 = hcl.scalar(0, "dx_LU2")
-                                    dx_LU3 = hcl.scalar(0, "dx_LU3")
-                                    dx_LU4 = hcl.scalar(0, "dx_LU4")
-                                    dx_LU5 = hcl.scalar(0, "dx_LU5")
-                                    dx_LU6 = hcl.scalar(0, "dx_LU6")
+                                        dx_LL1 = hcl.scalar(0, "dx_LL1")
+                                        dx_LL2 = hcl.scalar(0, "dx_LL2")
+                                        dx_LL3 = hcl.scalar(0, "dx_LL3")
+                                        dx_LL4 = hcl.scalar(0, "dx_LL4")
+                                        dx_LL5 = hcl.scalar(0, "dx_LL5")
+                                        dx_LL6 = hcl.scalar(0, "dx_LL6")
 
-                                    dx_UU1 = hcl.scalar(0, "dx_UU1")
-                                    dx_UU2 = hcl.scalar(0, "dx_UU2")
-                                    dx_UU3 = hcl.scalar(0, "dx_UU3")
-                                    dx_UU4 = hcl.scalar(0, "dx_UU4")
-                                    dx_UU5 = hcl.scalar(0, "dx_UU5")
-                                    dx_UU6 = hcl.scalar(0, "dx_UU6")
+                                        dx_UL1 = hcl.scalar(0, "dx_UL1")
+                                        dx_UL2 = hcl.scalar(0, "dx_UL2")
+                                        dx_UL3 = hcl.scalar(0, "dx_UL3")
+                                        dx_UL4 = hcl.scalar(0, "dx_UL4")
+                                        dx_UL5 = hcl.scalar(0, "dx_UL5")
+                                        dx_UL6 = hcl.scalar(0, "dx_UL6")
+                                        #
+                                        dx_LU1 = hcl.scalar(0, "dx_LU1")
+                                        dx_LU2 = hcl.scalar(0, "dx_LU2")
+                                        dx_LU3 = hcl.scalar(0, "dx_LU3")
+                                        dx_LU4 = hcl.scalar(0, "dx_LU4")
+                                        dx_LU5 = hcl.scalar(0, "dx_LU5")
+                                        dx_LU6 = hcl.scalar(0, "dx_LU6")
 
-                                    # Find LOWER BOUND optimal control
-                                    uOptL1[0], uOptL2[0], uOptL3[0], uOptL4[0] = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (
-                                    min_deriv1[0], min_deriv2[0], min_deriv3[0], min_deriv4[0], min_deriv5[0],
-                                    min_deriv6[0]))
-                                    # Find UPPER BOUND optimal control
-                                    uOptU1[0], uOptU2[0], uOptU3[0], uOptU4[0] = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (
-                                    max_deriv1[0], max_deriv2[0], max_deriv3[0], max_deriv4[0], max_deriv5[0],
-                                    max_deriv6[0]))
+                                        dx_UU1 = hcl.scalar(0, "dx_UU1")
+                                        dx_UU2 = hcl.scalar(0, "dx_UU2")
+                                        dx_UU3 = hcl.scalar(0, "dx_UU3")
+                                        dx_UU4 = hcl.scalar(0, "dx_UU4")
+                                        dx_UU5 = hcl.scalar(0, "dx_UU5")
+                                        dx_UU6 = hcl.scalar(0, "dx_UU6")
 
-                                    # Get upper bound and lower bound rates of changes
-                                    dx_LL1[0], dx_LL2[0], dx_LL3[0], dx_LL4[0], dx_LL5[0], dx_LL6[
-                                        0] = my_object.dynamics(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (uOptL1[0], uOptL2[0], uOptL3[0], uOptL4[0]),
-                                                                (dOptL1[0], dOptL2[0], dOptL3[0], dOptL4[0]))
-                                    # Get absolute value of each
-                                    dx_LL1[0] = my_abs(dx_LL1[0])
-                                    dx_LL2[0] = my_abs(dx_LL2[0])
-                                    dx_LL3[0] = my_abs(dx_LL3[0])
-                                    dx_LL4[0] = my_abs(dx_LL4[0])
-                                    dx_LL5[0] = my_abs(dx_LL5[0])
-                                    dx_LL6[0] = my_abs(dx_LL6[0])
+                                        # Find LOWER BOUND optimal control
+                                        uOptL1[0], uOptL2[0], uOptL3[0], uOptL4[0] = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (
+                                        min_deriv1[0], min_deriv2[0], min_deriv3[0], min_deriv4[0], min_deriv5[0],
+                                        min_deriv6[0]))
+                                        # Find UPPER BOUND optimal control
+                                        uOptU1[0], uOptU2[0], uOptU3[0], uOptU4[0] = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (
+                                        max_deriv1[0], max_deriv2[0], max_deriv3[0], max_deriv4[0], max_deriv5[0],
+                                        max_deriv6[0]))
 
-                                    dx_UL1[0], dx_UL2[0], dx_UL3[0], dx_UL4[0], dx_UL5[0], dx_UL6[
-                                        0] = my_object.dynamics(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (uOptU1[0], uOptU2[0], uOptU3[0], uOptU4[0]),
-                                                                (dOptL1[0], dOptL2[0], dOptL3[0], dOptL4[0]))
-                                    # Get absolute value of each
-                                    dx_UL1[0] = my_abs(dx_UL1[0])
-                                    dx_UL2[0] = my_abs(dx_UL2[0])
-                                    dx_UL3[0] = my_abs(dx_UL3[0])
-                                    dx_UL4[0] = my_abs(dx_UL4[0])
-                                    dx_UL5[0] = my_abs(dx_UL5[0])
-                                    dx_UL6[0] = my_abs(dx_UL6[0])
+                                        # Get upper bound and lower bound rates of changes
+                                        dx_LL1[0], dx_LL2[0], dx_LL3[0], dx_LL4[0], dx_LL5[0], dx_LL6[
+                                            0] = my_object.dynamics(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (uOptL1[0], uOptL2[0], uOptL3[0], uOptL4[0]),
+                                                                    (dOptL1[0], dOptL2[0], dOptL3[0], dOptL4[0]))
+                                        # Get absolute value of each
+                                        dx_LL1[0] = my_abs(dx_LL1[0])
+                                        dx_LL2[0] = my_abs(dx_LL2[0])
+                                        dx_LL3[0] = my_abs(dx_LL3[0])
+                                        dx_LL4[0] = my_abs(dx_LL4[0])
+                                        dx_LL5[0] = my_abs(dx_LL5[0])
+                                        dx_LL6[0] = my_abs(dx_LL6[0])
 
-                                    # Set maximum alphas
-                                    alpha1[0] = my_max(dx_UL1[0], dx_LL1[0])
-                                    alpha2[0] = my_max(dx_UL2[0], dx_LL2[0])
-                                    alpha3[0] = my_max(dx_UL3[0], dx_LL3[0])
-                                    alpha4[0] = my_max(dx_UL4[0], dx_LL4[0])
-                                    alpha5[0] = my_max(dx_UL5[0], dx_LL5[0])
-                                    alpha6[0] = my_max(dx_UL6[0], dx_LL6[0])
+                                        dx_UL1[0], dx_UL2[0], dx_UL3[0], dx_UL4[0], dx_UL5[0], dx_UL6[
+                                            0] = my_object.dynamics(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (uOptU1[0], uOptU2[0], uOptU3[0], uOptU4[0]),
+                                                                    (dOptL1[0], dOptL2[0], dOptL3[0], dOptL4[0]))
+                                        # Get absolute value of each
+                                        dx_UL1[0] = my_abs(dx_UL1[0])
+                                        dx_UL2[0] = my_abs(dx_UL2[0])
+                                        dx_UL3[0] = my_abs(dx_UL3[0])
+                                        dx_UL4[0] = my_abs(dx_UL4[0])
+                                        dx_UL5[0] = my_abs(dx_UL5[0])
+                                        dx_UL6[0] = my_abs(dx_UL6[0])
 
-                                    dx_LU1[0], dx_LU2[0], dx_LU3[0], dx_LU4[0], dx_LU5[0], dx_LU6[
-                                        0] = my_object.dynamics(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (uOptL1[0], uOptL2[0], uOptL3[0], uOptL4[0]),
-                                                                (dOptU1[0], dOptU2[0], dOptU3[0], dOptU4[0]))
-                                    # Get absolute value of each
-                                    dx_LU1[0] = my_abs(dx_LU1[0])
-                                    dx_LU2[0] = my_abs(dx_LU2[0])
-                                    dx_LU3[0] = my_abs(dx_LU3[0])
-                                    dx_LU4[0] = my_abs(dx_LU4[0])
-                                    dx_LU5[0] = my_abs(dx_LU5[0])
-                                    dx_LU6[0] = my_abs(dx_LU6[0])
+                                        # Set maximum alphas
+                                        alpha1[0] = my_max(dx_UL1[0], dx_LL1[0])
+                                        alpha2[0] = my_max(dx_UL2[0], dx_LL2[0])
+                                        alpha3[0] = my_max(dx_UL3[0], dx_LL3[0])
+                                        alpha4[0] = my_max(dx_UL4[0], dx_LL4[0])
+                                        alpha5[0] = my_max(dx_UL5[0], dx_LL5[0])
+                                        alpha6[0] = my_max(dx_UL6[0], dx_LL6[0])
 
-                                    alpha1[0] = my_max(alpha1[0], dx_LU1[0])
-                                    alpha2[0] = my_max(alpha2[0], dx_LU2[0])
-                                    alpha3[0] = my_max(alpha3[0], dx_LU3[0])
-                                    alpha4[0] = my_max(alpha4[0], dx_LU4[0])
-                                    alpha5[0] = my_max(alpha5[0], dx_LU5[0])
-                                    alpha6[0] = my_max(alpha6[0], dx_LU6[0])
+                                        dx_LU1[0], dx_LU2[0], dx_LU3[0], dx_LU4[0], dx_LU5[0], dx_LU6[
+                                            0] = my_object.dynamics(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (uOptL1[0], uOptL2[0], uOptL3[0], uOptL4[0]),
+                                                                    (dOptU1[0], dOptU2[0], dOptU3[0], dOptU4[0]))
+                                        # Get absolute value of each
+                                        dx_LU1[0] = my_abs(dx_LU1[0])
+                                        dx_LU2[0] = my_abs(dx_LU2[0])
+                                        dx_LU3[0] = my_abs(dx_LU3[0])
+                                        dx_LU4[0] = my_abs(dx_LU4[0])
+                                        dx_LU5[0] = my_abs(dx_LU5[0])
+                                        dx_LU6[0] = my_abs(dx_LU6[0])
 
-                                    dx_UU1[0], dx_UU2[0], dx_UU3[0], dx_UU4[0], dx_UU5[0], dx_UU6[
-                                        0] = my_object.dynamics(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (uOptU1[0], uOptU2[0], uOptU3[0], uOptU4[0]),
-                                                                (dOptU1[0], dOptU2[0], dOptU3[0], dOptU4[0]))
-                                    dx_UU1[0] = my_abs(dx_UU1[0])
-                                    dx_UU2[0] = my_abs(dx_UU2[0])
-                                    dx_UU3[0] = my_abs(dx_UU3[0])
-                                    dx_UU4[0] = my_abs(dx_UU4[0])
-                                    dx_UU5[0] = my_abs(dx_UU5[0])
-                                    dx_UU6[0] = my_abs(dx_UU6[0])
+                                        alpha1[0] = my_max(alpha1[0], dx_LU1[0])
+                                        alpha2[0] = my_max(alpha2[0], dx_LU2[0])
+                                        alpha3[0] = my_max(alpha3[0], dx_LU3[0])
+                                        alpha4[0] = my_max(alpha4[0], dx_LU4[0])
+                                        alpha5[0] = my_max(alpha5[0], dx_LU5[0])
+                                        alpha6[0] = my_max(alpha6[0], dx_LU6[0])
 
-                                    alpha1[0] = my_max(alpha1[0], dx_UU1[0])
-                                    alpha2[0] = my_max(alpha2[0], dx_UU2[0])
-                                    alpha3[0] = my_max(alpha3[0], dx_UU3[0])
-                                    alpha4[0] = my_max(alpha4[0], dx_UU4[0])
-                                    alpha5[0] = my_max(alpha5[0], dx_UU5[0])
-                                    alpha6[0] = my_max(alpha6[0], dx_UU6[0])
+                                        dx_UU1[0], dx_UU2[0], dx_UU3[0], dx_UU4[0], dx_UU5[0], dx_UU6[
+                                            0] = my_object.dynamics(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (uOptU1[0], uOptU2[0], uOptU3[0], uOptU4[0]),
+                                                                    (dOptU1[0], dOptU2[0], dOptU3[0], dOptU4[0]))
+                                        dx_UU1[0] = my_abs(dx_UU1[0])
+                                        dx_UU2[0] = my_abs(dx_UU2[0])
+                                        dx_UU3[0] = my_abs(dx_UU3[0])
+                                        dx_UU4[0] = my_abs(dx_UU4[0])
+                                        dx_UU5[0] = my_abs(dx_UU5[0])
+                                        dx_UU6[0] = my_abs(dx_UU6[0])
 
-                                    diss = hcl.scalar(0, "diss")
-                                    diss[0] = 0.5 * (deriv_diff1[i, j, k, l, m, n] * alpha1[0] + deriv_diff2[
-                                        i, j, k, l, m, n] * alpha2[0] \
-                                                     + deriv_diff3[i, j, k, l, m, n] * alpha3[0] + deriv_diff4[
-                                                         i, j, k, l, m, n] * alpha4[0] \
-                                                     + deriv_diff5[i, j, k, l, m, n] * alpha5[0] + deriv_diff6[
-                                                         i, j, k, l, m, n] * alpha6[0])
+                                        alpha1[0] = my_max(alpha1[0], dx_UU1[0])
+                                        alpha2[0] = my_max(alpha2[0], dx_UU2[0])
+                                        alpha3[0] = my_max(alpha3[0], dx_UU3[0])
+                                        alpha4[0] = my_max(alpha4[0], dx_UU4[0])
+                                        alpha5[0] = my_max(alpha5[0], dx_UU5[0])
+                                        alpha6[0] = my_max(alpha6[0], dx_UU6[0])
 
-                                    # Finally
-                                    V_new[i, j, k, l, m, n] = -(V_new[i, j, k, l, m, n] - diss[0])
-                                    # Get maximum alphas in each dimension
+                                        diss = hcl.scalar(0, "diss")
+                                        diss[0] = 0.5 * (deriv_diff1[i, j, k, l, m, n] * alpha1[0] + deriv_diff2[
+                                            i, j, k, l, m, n] * alpha2[0] \
+                                                         + deriv_diff3[i, j, k, l, m, n] * alpha3[0] + deriv_diff4[
+                                                             i, j, k, l, m, n] * alpha4[0] \
+                                                         + deriv_diff5[i, j, k, l, m, n] * alpha5[0] + deriv_diff6[
+                                                             i, j, k, l, m, n] * alpha6[0])
 
-                                    # Calculate alphas
-                                    with hcl.if_(alpha1 > max_alpha1):
-                                        max_alpha1[0] = alpha1[0]
-                                    with hcl.if_(alpha2 > max_alpha2):
-                                        max_alpha2[0] = alpha2[0]
-                                    with hcl.if_(alpha3 > max_alpha3):
-                                        max_alpha3[0] = alpha3[0]
-                                    with hcl.if_(alpha4 > max_alpha4):
-                                        max_alpha4[0] = alpha4[0]
-                                    with hcl.if_(alpha5 > max_alpha5):
-                                        max_alpha5[0] = alpha5[0]
-                                    with hcl.if_(alpha6 > max_alpha6):
-                                        max_alpha6[0] = alpha6[0]
+                                        # Finally
+                                        V_new[i, j, k, l, m, n] = -(V_new[i, j, k, l, m, n] - diss[0])
+                                        # Get maximum alphas in each dimension
+
+                                        # Calculate alphas
+                                        with hcl.if_(alpha1 > max_alpha1):
+                                            max_alpha1[0] = alpha1[0]
+                                        with hcl.if_(alpha2 > max_alpha2):
+                                            max_alpha2[0] = alpha2[0]
+                                        with hcl.if_(alpha3 > max_alpha3):
+                                            max_alpha3[0] = alpha3[0]
+                                        with hcl.if_(alpha4 > max_alpha4):
+                                            max_alpha4[0] = alpha4[0]
+                                        with hcl.if_(alpha5 > max_alpha5):
+                                            max_alpha5[0] = alpha5[0]
+                                        with hcl.if_(alpha6 > max_alpha6):
+                                            max_alpha6[0] = alpha6[0]
 
         # Determine time step
         delta_t = hcl.compute((1,), lambda x: step_bound(), name="delta_t")
@@ -428,7 +434,7 @@ def graph_6D(my_object, g, compMethod, accuracy):
         return result
 
 
-    s = hcl.create_schedule([V_f, V_init, x1, x2, x3, x4, x5, x6, t, l0], graph_create)
+    s = hcl.create_schedule([V_f, V_init, x1, x2, x3, x4, x5, x6, t, l0, active_set_holder], graph_create)
     ##################### CODE OPTIMIZATION HERE ###########################
     print("Optimizing\n")
 
