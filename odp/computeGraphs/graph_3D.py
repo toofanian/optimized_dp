@@ -70,7 +70,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                 with hcl.for_(0, V_init.shape[1], name="j") as j:
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
 
-                        with hcl.if_(active_set[i, j, k] == 1):
+                        with hcl.if_(active_set[i, j, k] == True):
                             # Variables to calculate dV_dx
                             dV_dx_L = hcl.scalar(0, "dV_dx_L")
                             dV_dx_R = hcl.scalar(0, "dV_dx_R")

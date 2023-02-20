@@ -83,7 +83,7 @@ def graph_4D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                 with hcl.for_(0, V_init.shape[1], name="j") as j:
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
                         with hcl.for_(0, V_init.shape[3], name="l") as l:
-                            with hcl.if_(active_set[i, j, k, l] == 1):
+                            with hcl.if_(active_set[i, j, k, l] == True):
                                 # Variables to calculate dV_dx
                                 dV_dx1_L = hcl.scalar(0, "dV_dx1_L")
                                 dV_dx1_R = hcl.scalar(0, "dV_dx1_R")
@@ -233,7 +233,7 @@ def graph_4D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                 with hcl.for_(0, V_init.shape[1], name="j") as j:
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
                         with hcl.for_(0, V_init.shape[3], name="l") as l:
-                            with hcl.if_(active_set[i, j, k, l] == 1):
+                            with hcl.if_(active_set[i, j, k, l] == True):
                                 dx_LL1 = hcl.scalar(0, "dx_LL1")
                                 dx_LL2 = hcl.scalar(0, "dx_LL2")
                                 dx_LL3 = hcl.scalar(0, "dx_LL3")

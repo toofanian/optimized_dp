@@ -97,7 +97,7 @@ def graph_6D(my_object, g, compMethod, accuracy):
                         with hcl.for_(0, V_init.shape[3], name="l") as l:
                             with hcl.for_(0, V_init.shape[4], name="m") as m:
                                 with hcl.for_(0, V_init.shape[5], name="n") as n:
-                                    with hcl.if_(active_set[i, j, k, l, m, n] == 1):
+                                    with hcl.if_(active_set[i, j, k, l, m, n] == True):
 
                                         # Variables to calculate dV_dx
                                         dV_dx1_L = hcl.scalar(0, "dV_dx1_L")
@@ -282,7 +282,7 @@ def graph_6D(my_object, g, compMethod, accuracy):
                         with hcl.for_(0, V_init.shape[3], name="l") as l:
                             with hcl.for_(0, V_init.shape[4], name="m") as m:
                                 with hcl.for_(0, V_init.shape[5], name="n") as n:
-                                    with hcl.if_(active_set[i, j, k, l, m, n] == 1):
+                                    with hcl.if_(active_set[i, j, k, l, m, n] == True):
 
                                         dx_LL1 = hcl.scalar(0, "dx_LL1")
                                         dx_LL2 = hcl.scalar(0, "dx_LL2")
