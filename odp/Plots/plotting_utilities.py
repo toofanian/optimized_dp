@@ -38,7 +38,9 @@ def plot_isosurface(grid, V, plot_option):
             isomin=plot_option.min_isosurface,
             surface_count=1,
             isomax=plot_option.max_isosurface,
-            caps=dict(x_show=True, y_show=True)
+            caps=dict(x_show=True, y_show=True),
+            auto_open=False,
+            filename='plot_result.html'
         ))
-        fig.show()
+        # fig.show()
         print("Please check the plot on your browser.")
