@@ -170,6 +170,7 @@ def HJSolver(dynamics_obj, grid, multiple_value, tau, compMethod,
         print(valfuncs.shape)
 
 
+
     ################ USE THE EXECUTABLE ############
     # Variables used for timing
     execution_time = 0
@@ -244,8 +245,11 @@ def HJSolver(dynamics_obj, grid, multiple_value, tau, compMethod,
     ##################### PLOTTING #####################
     if plot_option.do_plot :
         # Only plots last value array for now
-        plot_isosurface(grid, V_1.asnumpy(), plot_option)
-
+        if saveAllTimeSteps:
+            valfuncs[..., 0] = V_1.asnumpy()
+            plot_isosurface(grid, valfuncs, plot_option)
+        else:
+            plot_isosurface(grid, V_1.asnumpy(), plot_option)
     if saveAllTimeSteps is True:
         valfuncs[..., 0] = V_1.asnumpy()
         return valfuncs
