@@ -10,6 +10,8 @@ def graph_5D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
     V_init = hcl.placeholder(tuple(g.pts_each_dim), name="V_init", dtype=hcl.Float())
     l0 = hcl.placeholder(tuple(g.pts_each_dim), name="l0", dtype=hcl.Float())
     t = hcl.placeholder((2,), name="t", dtype=hcl.Float())
+    active_set_holder = hcl.placeholder(tuple(g.pts_each_dim), name="active_set_holder", dtype=hcl.Int())
+
 
     # Positions vector
     x1 = hcl.placeholder((g.pts_each_dim[0],), name="x1", dtype=hcl.Float())
@@ -18,7 +20,7 @@ def graph_5D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
     x4 = hcl.placeholder((g.pts_each_dim[3],), name="x4", dtype=hcl.Float())
     x5 = hcl.placeholder((g.pts_each_dim[4],), name="x5", dtype=hcl.Float())
 
-    def graph_create(V_new, V_init, x1, x2, x3, x4, x5, t, l0):
+    def graph_create(V_new, V_init, x1, x2, x3, x4, x5, t, l0, active_set):
         # Specify intermediate tensors
         deriv_diff1 = hcl.compute(V_init.shape, lambda *x: 0, "deriv_diff1")
         deriv_diff2 = hcl.compute(V_init.shape, lambda *x: 0, "deriv_diff2")
@@ -87,6 +89,7 @@ def graph_5D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
                         with hcl.for_(0, V_init.shape[3], name="l") as l:
                             with hcl.for_(0, V_init.shape[4], name="m") as m:
+                                with hcl.if_(active_set[i, j, k, l, m] == True):
                                     # Variables to calculate dV_dx
                                     dV_dx1_L = hcl.scalar(0, "dV_dx1_L")
                                     dV_dx1_R = hcl.scalar(0, "dV_dx1_R")
@@ -254,6 +257,7 @@ def graph_5D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
                         with hcl.for_(0, V_init.shape[3], name="l") as l:
                             with hcl.for_(0, V_init.shape[4], name="m") as m:
+                                with hcl.if_(active_set[i, j, k, l, m] == True):
                                     dx_LL1 = hcl.scalar(0, "dx_LL1")
                                     dx_LL2 = hcl.scalar(0, "dx_LL2")
                                     dx_LL3 = hcl.scalar(0, "dx_LL3")
@@ -423,7 +427,7 @@ def graph_5D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                                 Deriv_array[i, j, k, l, m] = (dV_dx_L[0] + dV_dx_R[0]) / 2
 
     if generate_SpatDeriv == False:
-        s = hcl.create_schedule([V_f, V_init, x1, x2, x3, x4, x5, t, l0], graph_create)
+        s = hcl.create_schedule([V_f, V_init, x1, x2, x3, x4, x5, t, l0, active_set_holder], graph_create)
         ##################### CODE OPTIMIZATION HERE ###########################
         print("Optimizing\n")
 

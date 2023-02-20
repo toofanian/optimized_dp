@@ -272,8 +272,12 @@ class HjSolver:
             saveAllTimeSteps=False,
             accuracy="low",
             untilConvergent=False,
-            epsilon=2e-3
+            epsilon=2e-3,
+            active_set=None
     ):
+        if active_set is None:
+            active_set = np.ones(grid.points_each_dim, dtype=int)
+        active_set = hcl.asarray(np.array(active_set).astype(int))
 
         print("Welcome to optimized_dp \n")
         if type(multiple_value) == list:
@@ -388,7 +392,7 @@ class HjSolver:
 
                 # Run the execution and pass input into graph
                 if grid.dims == 3:
-                    self._solve_pde(V_1, V_0, list_x1, list_x2, list_x3, t_minh, l0)
+                    self._solve_pde(V_1, V_0, list_x1, list_x2, list_x3, t_minh, l0, active_set)
                 if grid.dims == 4:
                     self._solve_pde(V_1, V_0, list_x1, list_x2, list_x3, list_x4, t_minh, l0, probe)
                 if grid.dims == 5:
