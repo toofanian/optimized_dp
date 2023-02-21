@@ -21,7 +21,7 @@ def solveValueIteration(MDP_obj):
     hcl.config.init_dtype = hcl.Float(32)
 
     ########################################## INITIALIZE ##########################################
-
+    #blah
     # Convert the python array to hcl type array
     V_opt = hcl.asarray(np.zeros(MDP_obj._ptsEachDim))
     intermeds = hcl.asarray(np.ones(MDP_obj._actions.shape[0]))
