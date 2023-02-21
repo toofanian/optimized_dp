@@ -69,7 +69,9 @@ import time
 init_time = time.time()
 for i in range(50):
     # TODO: Analyze how much extra time this takes
-    new_vals = solver(my_car, g, old_vals, tau, compMethods, po2, saveAllTimeSteps=False)
+    # active_set = np.random.randint(0, 2, size=initial_value_f.shape)
+    active_set = old_vals > -0.1
+    new_vals = solver(my_car, g, old_vals, tau, compMethods, po2, saveAllTimeSteps=False, active_set=active_set)
     t_total += tau[1]
     vals += [new_vals]
     old_vals = new_vals
@@ -82,9 +84,9 @@ vals = np.flip(vals, axis=-1)
 plot_isosurface(g, vals, po2)
 
 
-init_time2 = time.time()
-other_vals = HJSolver(my_car, g, initial_value_f, [0, 5], compMethods, po2, saveAllTimeSteps=True)
-t_total2 = time.time() - init_time2
-print(t_total2)
-plot_isosurface(g, other_vals, po2)
+# init_time2 = time.time()
+# other_vals = HJSolver(my_car, g, initial_value_f, [0, 5], compMethods, po2, saveAllTimeSteps=True)
+# t_total2 = time.time() - init_time2
+# print(t_total2)
+# plot_isosurface(g, other_vals, po2)
 # assert np.isclose(vals[-1], other_vals).all()

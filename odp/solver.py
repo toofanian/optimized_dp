@@ -138,7 +138,7 @@ class HJSolverClass:
             
     def __call__(self, dynamics_obj, grid, init_value, tau, compMethod,
                  plot_option, saveAllTimeSteps=False,
-                 accuracy="low", untilConvergent=False, epsilon=2e-3):
+                 accuracy="low", untilConvergent=False, epsilon=2e-3, active_set=None):
         if not self.initialized:
             self.initialize(dynamics_obj, grid, init_value, tau, compMethod,
                  plot_option, saveAllTimeSteps,
@@ -146,6 +146,11 @@ class HJSolverClass:
         # Tensors input to our computation graph
         V_0 = hcl.asarray(init_value)
         V_1 = hcl.asarray(np.zeros(tuple(grid.pts_each_dim)))
+        if active_set is None:
+            active_set = np.ones(tuple(grid.pts_each_dim))
+        dummy_flags = hcl.asarray(active_set)
+        # dummy_flags = hcl.asarray(np.random.randint(0, 2, size=tuple(grid.pts_each_dim)))
+        # dummy_flags = hcl.asarray(np.zeros(tuple(grid.pts_each_dim)))
         # Variables used for timing
         iter = 0
         tNow = tau[0]
@@ -165,7 +170,7 @@ class HJSolverClass:
 
                 # Run the execution and pass input into graph
                 if grid.dims == 3:
-                    self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, t_minh, self.l0)
+                    self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, t_minh, self.l0, dummy_flags)
                 if grid.dims == 4:
                     self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, self.list_x4, t_minh, self.l0)
                 if grid.dims == 5:
@@ -297,7 +302,7 @@ def HJSolver(dynamics_obj, grid, multiple_value, tau, compMethod,
     iter = 0
     tNow = tau[0]
     print("Started running\n")
-
+    dummy_flags = hcl.asarray(np.ones_like(init_value))
     # Backward reachable set/tube will be computed over the specified time horizon
     # Or until convergent ( which ever happens first )
     for i in range (1, len(tau)):
@@ -316,7 +321,7 @@ def HJSolver(dynamics_obj, grid, multiple_value, tau, compMethod,
 
             # Run the execution and pass input into graph
             if grid.dims == 3:
-                solve_pde(V_1, V_0, list_x1, list_x2, list_x3, t_minh, l0)
+                solve_pde(V_1, V_0, list_x1, list_x2, list_x3, t_minh, l0, dummy_flags)
             if grid.dims == 4:
                 solve_pde(V_1, V_0, list_x1, list_x2, list_x3, list_x4, t_minh, l0, probe)
             if grid.dims == 5:
