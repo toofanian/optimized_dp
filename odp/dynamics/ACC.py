@@ -1,7 +1,9 @@
 import heterocl as hcl
 
+from odp.dynamics.abstract_dynamics import OdpDynamics
 
-class ActiveCruiseControl:
+
+class ActiveCruiseControl(OdpDynamics):
     def __init__(self, friction_coeffs, target_velocity, mass, uMode="min", dMode="max"):
         self.friction_coefficients = friction_coeffs
         self.target_velocity = target_velocity
@@ -9,7 +11,6 @@ class ActiveCruiseControl:
         self.uMode = uMode
         self.control_upper_bounds = [5000.0]
         self.dMode = dMode
-
 
     def opt_ctrl(self, t, state, spat_deriv):
         opt_a = hcl.scalar(self.control_upper_bounds[0], "opt_a")
