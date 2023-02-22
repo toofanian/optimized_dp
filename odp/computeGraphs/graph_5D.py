@@ -5,7 +5,7 @@ from odp.spatialDerivatives.first_orderENO5D import *
 ########################## 5D graph definition ########################
 
 # Note that t has 2 elements t1, t2
-def graph_5D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv_dim=1):
+def graph_5D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv_dim=1, verbose=True):
     V_f = hcl.placeholder(tuple(g.pts_each_dim), name="V_f", dtype=hcl.Float())
     V_init = hcl.placeholder(tuple(g.pts_each_dim), name="V_init", dtype=hcl.Float())
     l0 = hcl.placeholder(tuple(g.pts_each_dim), name="l0", dtype=hcl.Float())
@@ -429,7 +429,8 @@ def graph_5D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
     if generate_SpatDeriv == False:
         s = hcl.create_schedule([V_f, V_init, x1, x2, x3, x4, x5, t, l0, active_set_holder], graph_create)
         ##################### CODE OPTIMIZATION HERE ###########################
-        print("Optimizing\n")
+        if verbose:
+            print("Optimizing\n")
 
         # Accessing the hamiltonian and dissipation stage
         s_H = graph_create.Hamiltonian

@@ -124,16 +124,16 @@ class HJSolverClass:
 
             # Get executable, obstacle check intial value function
             if grid.dims == 3:
-                self.solve_pde = graph_3D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
+                self.solve_pde = graph_3D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
 
             if grid.dims == 4:
-                self.solve_pde = graph_4D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
+                self.solve_pde = graph_4D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
 
             if grid.dims == 5:
-                self.solve_pde = graph_5D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
+                self.solve_pde = graph_5D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
 
             if grid.dims == 6:
-                self.solve_pde = graph_6D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy)
+                self.solve_pde = graph_6D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
             self.l0 = hcl.asarray(init_value)
             self.initialized = True
             self.execution_time = 0
