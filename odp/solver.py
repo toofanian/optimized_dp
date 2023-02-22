@@ -84,8 +84,9 @@ class HJSolverClass:
 
     def initialize(self, dynamics_obj, grid, init_value, tau, compMethod,
                  plot_option, saveAllTimeSteps=False,
-                 accuracy="low", untilConvergent=False, epsilon=2e-3):
-            print("Welcome to optimized_dp \n")
+                 accuracy="low", untilConvergent=False, epsilon=2e-3, verbose=True):
+            if verbose:
+                print("Welcome to optimized_dp \n")
             # if type(multiple_value) == list:
             #     # We have both goal and obstacle set
             #     self.target = multiple_value[0] # Target set
@@ -97,7 +98,8 @@ class HJSolverClass:
             hcl.init()
             hcl.config.init_dtype = hcl.Float(32)
 
-            print("Initializing\n")
+            if verbose:
+                print("Initializing\n")
 
             # Array for each state values
             list_x1 = np.reshape(grid.vs[0], grid.pts_each_dim[0])
@@ -138,11 +140,11 @@ class HJSolverClass:
             
     def __call__(self, dynamics_obj, grid, init_value, tau, compMethod,
                  plot_option, saveAllTimeSteps=False,
-                 accuracy="low", untilConvergent=False, epsilon=2e-3, active_set=None):
+                 accuracy="low", untilConvergent=False, epsilon=2e-3, active_set=None, verbose=True):
         if not self.initialized:
             self.initialize(dynamics_obj, grid, init_value, tau, compMethod,
                  plot_option, saveAllTimeSteps,
-                 accuracy, untilConvergent, epsilon)
+                 accuracy, untilConvergent, epsilon, verbose=verbose)
         # Tensors input to our computation graph
         V_0 = hcl.asarray(init_value)
         V_1 = hcl.asarray(np.zeros(tuple(grid.pts_each_dim)))
@@ -154,7 +156,8 @@ class HJSolverClass:
         # Variables used for timing
         iter = 0
         tNow = tau[0]
-        print("Started running\n")
+        if verbose:
+            print("Started running\n")
 
         # Backward reachable set/tube will be computed over the specified time horizon
         # Or until convergent ( which ever happens first )
@@ -184,21 +187,25 @@ class HJSolverClass:
                 self.execution_time += time.time() - start
 
                 # Some information printin
-                print(t_minh)
-                print("Computational time to integrate (s): {:.5f}".format(time.time() - start))
+                if verbose:
+                    print(t_minh)
+                    print("Computational time to integrate (s): {:.5f}".format(time.time() - start))
 
                 if untilConvergent is True:
                     # Compare difference between V_{t-1} and V_{t} and choose the max changes
                     diff = np.amax(np.abs(V_1.asnumpy() - prev_arr))
-                    print("Max difference between V_old and V_new : {:.5f}".format(diff))
+                    if verbose:
+                        print("Max difference between V_old and V_new : {:.5f}".format(diff))
                     if diff < epsilon:
-                        print("Result converged ! Exiting the compute loop. Have a good day.")
+                        if verbose:
+                            print("Result converged ! Exiting the compute loop. Have a good day.")
                         break
             else: # if it didn't break because of convergent condition
                 continue
             break # only if convergent condition is achieved
-        print("Total kernel time (s): {:.5f}".format(self.execution_time))
-        print("Finished solving\n")
+        if verbose:
+            print("Total kernel time (s): {:.5f}".format(self.execution_time))
+            print("Finished solving\n")
         return V_1.asnumpy()
     
             
