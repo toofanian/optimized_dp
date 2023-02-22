@@ -11,7 +11,10 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
     V_init = hcl.placeholder(tuple(g.pts_each_dim), name="V_init", dtype=hcl.Float())
     l0 = hcl.placeholder(tuple(g.pts_each_dim), name="l0", dtype=hcl.Float())
     t = hcl.placeholder((2,), name="t", dtype=hcl.Float())
-    active_set_holder = hcl.placeholder(tuple(g.pts_each_dim), name="active_set_holder", dtype=hcl.Int())
+    probe = hcl.placeholder(tuple(g.pts_each_dim), name="probe", dtype=hcl.Float())
+
+    # active_set_placeholder = hcl.compute(V_init.shape, lambda *x: 0, "active_set")
+    active_set_placeholder = hcl.placeholder(tuple(g.pts_each_dim), name="active_set", dtype=hcl.Float())
 
     # Positions vector
     x1 = hcl.placeholder((g.pts_each_dim[0],), name="x1", dtype=hcl.Float())
@@ -42,8 +45,11 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
             stepBound = hcl.scalar(0, "stepBound")
             stepBoundInv[0] = max_alpha1[0] / g.dx[0] + max_alpha2[0] / g.dx[1] + max_alpha3[0] / g.dx[2]
             stepBound[0] = 0.8 / stepBoundInv[0]
+            with hcl.if_(stepBound < 0.01):
+                stepBound[0] = 0.01
             with hcl.if_(stepBound > t[1] - t[0]):
                 stepBound[0] = t[1] - t[0]
+
             t[0] = t[0] + stepBound[0]
             return stepBound[0]
 
@@ -70,7 +76,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                 with hcl.for_(0, V_init.shape[1], name="j") as j:
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
 
-                        with hcl.if_(active_set[i, j, k] == 1):
+                        with hcl.if_(active_set[i, j, k] > 0.1):
                             # Variables to calculate dV_dx
                             dV_dx_L = hcl.scalar(0, "dV_dx_L")
                             dV_dx_R = hcl.scalar(0, "dV_dx_R")
@@ -106,9 +112,9 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
 
                             # Use method of DubinsCar to solve optimal control instead
                             uOpt = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]),
-                                                          (dV_dx[0], dV_dy[0], dV_dT[0]))
+                                                        (dV_dx[0], dV_dy[0], dV_dT[0]))
                             dOpt = my_object.opt_dstb(t, (x1[i], x2[j], x3[k]),
-                                                     (dV_dx[0], dV_dy[0], dV_dT[0]))
+                                                    (dV_dx[0], dV_dy[0], dV_dT[0]))
 
                             # Calculate dynamical rates of changes
                             dx_dt, dy_dt, dtheta_dt = my_object.dynamics(t, (x1[i], x2[j], x3[k]), uOpt, dOpt)
@@ -176,8 +182,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
             with hcl.for_(0, V_init.shape[0], name="i") as i:
                 with hcl.for_(0, V_init.shape[1], name="j") as j:
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
-
-                        with hcl.if_(active_set[i, j, k] == 1):
+                        with hcl.if_(active_set[i, j, k] > 0.1):
                             dx_LL1 = hcl.scalar(0, "dx_LL1")
                             dx_LL2 = hcl.scalar(0, "dx_LL2")
                             dx_LL3 = hcl.scalar(0, "dx_LL3")
@@ -208,7 +213,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                             # Find UPPER BOUND optimal control
                             uOptU1[0], uOptU2[0], uOptU3[0] = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]),
                                                                                             (max_deriv1[0], max_deriv2[0],
-                                                                                             max_deriv3[0]))
+                                                                                            max_deriv3[0]))
                             # Find magnitude of rates of changes
                             dx_LL1[0], dx_LL2[0], dx_LL3[0] = my_object.dynamics(t, (x1[i], x2[j], x3[k]),
                                                                                             (uOptL1[0], uOptL2[0], uOptL3[0]), \
@@ -313,7 +318,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                         Deriv_array[i, j, k] = (dV_dx_L[0] + dV_dx_R[0]) / 2
 
     if generate_SpatDeriv == False:
-        s = hcl.create_schedule([V_f, V_init, x1, x2, x3, t, l0, active_set_holder], graph_create)
+        s = hcl.create_schedule([V_f, V_init, x1, x2, x3, t, l0, active_set_placeholder], graph_create)
         ##################### CODE OPTIMIZATION HERE ###########################
         print("Optimizing\n")
 
