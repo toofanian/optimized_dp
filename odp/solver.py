@@ -224,6 +224,7 @@ class HJSolverClass:
                 if verbose:
                     print(t_minh)
                     print("Computational time to integrate (s): {:.5f}".format(time.time() - start))
+                    print("Total kernel time (s): {:.5f}".format(self.execution_time))
 
                 if untilConvergent is True:
                     # Compare difference between V_{t-1} and V_{t} and choose the max changes
