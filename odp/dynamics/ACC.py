@@ -4,13 +4,11 @@ from odp.dynamics.abstract_dynamics import OdpDynamics
 
 
 class ActiveCruiseControl(OdpDynamics):
-    def __init__(self, friction_coeffs, target_velocity, mass, uMode="min", dMode="max"):
+    def __init__(self, friction_coeffs=(0, 0, 0), target_velocity=0, mass=1600):
         self.friction_coefficients = friction_coeffs
         self.target_velocity = target_velocity
         self.mass = mass
-        self.uMode = uMode
         self.control_upper_bounds = [5000.0]
-        self.dMode = dMode
 
     def opt_ctrl(self, t, state, spat_deriv):
         opt_a = hcl.scalar(self.control_upper_bounds[0], "opt_a")
