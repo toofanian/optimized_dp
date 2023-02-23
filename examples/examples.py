@@ -10,7 +10,7 @@ from odp.dynamics import DubinsCar4D2
 # Plot options
 from odp.Plots import PlotOptions
 # Solver core
-from odp.solver import HJSolver, computeSpatDerivArray
+from odp.solver import HJSolver, computeSpatDerivArray, HJSolverClass
 
 import math
 
@@ -147,7 +147,8 @@ po = PlotOptions(do_plot=True, plot_type="3d_plot", plotDims=[0,1,3],
 
 # In this example, we compute a Backward Reachable Tube
 compMethods = { "TargetSetMode": "minVWithV0"}
-result = HJSolver(my_car, g, Initial_value_f, tau, compMethods, po, saveAllTimeSteps=True)
+solver = HJSolverClass()
+result = solver(my_car, g, Initial_value_f, tau, compMethods, po, saveAllTimeSteps=True)
 
 last_time_step_result = result[..., 0]
 
