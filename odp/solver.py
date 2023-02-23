@@ -183,8 +183,8 @@ class HJSolverClass:
         # V_1 = hcl.asarray(np.zeros(tuple(grid.pts_each_dim))) #TODO is this ok for active set??
         V_1 = hcl.asarray(init_value)
         if active_set is None:
-            active_set = np.ones(tuple(grid.pts_each_dim))
-        dummy_flags = hcl.asarray(active_set)
+            active_set = np.ones(tuple(grid.pts_each_dim), dtype=float)
+        dummy_flags = hcl.asarray(active_set, dtype=hcl.Float())
         # dummy_flags = hcl.asarray(np.random.randint(0, 2, size=tuple(grid.pts_each_dim)))
         # dummy_flags = hcl.asarray(np.zeros(tuple(grid.pts_each_dim)))
         # Variables used for timing
@@ -197,7 +197,7 @@ class HJSolverClass:
         # Or until convergent ( which ever happens first )
         for i in range (1, len(tau)):
             #tNow = tau[i-1]
-            t_minh= hcl.asarray(np.array((tNow, tau[i])))
+            t_minh = hcl.asarray(np.array((tNow, tau[i])))
 
             while tNow <= tau[i] - 1e-4:
                 prev_arr = V_0.asnumpy()
@@ -364,7 +364,7 @@ def HJSolver(dynamics_obj, grid, multiple_value, tau, compMethod,
             if grid.dims == 3:
                 solve_pde(V_1, V_0, list_x1, list_x2, list_x3, t_minh, l0, dummy_flags)
             if grid.dims == 4:
-                solve_pde(V_1, V_0, list_x1, list_x2, list_x3, list_x4, t_minh, l0, probe)
+                solve_pde(V_1, V_0, list_x1, list_x2, list_x3, list_x4, t_minh, l0, probe, dummy_flags)
             if grid.dims == 5:
                 solve_pde(V_1, V_0, list_x1, list_x2, list_x3, list_x4, list_x5 ,t_minh, l0)
             if grid.dims == 6:

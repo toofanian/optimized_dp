@@ -67,7 +67,7 @@ vals = [initial_value_f]
 t_total = 0
 import time
 init_time = time.time()
-for i in range(50):
+for i in range(3):
     # TODO: Analyze how much extra time this takes
     # active_set = np.random.randint(0, 2, size=initial_value_f.shape)
     active_set = old_vals > -0.1

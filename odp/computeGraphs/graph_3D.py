@@ -11,9 +11,6 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
     V_init = hcl.placeholder(tuple(g.pts_each_dim), name="V_init", dtype=hcl.Float())
     l0 = hcl.placeholder(tuple(g.pts_each_dim), name="l0", dtype=hcl.Float())
     t = hcl.placeholder((2,), name="t", dtype=hcl.Float())
-    probe = hcl.placeholder(tuple(g.pts_each_dim), name="probe", dtype=hcl.Float())
-
-    # active_set_placeholder = hcl.compute(V_init.shape, lambda *x: 0, "active_set")
     active_set_placeholder = hcl.placeholder(tuple(g.pts_each_dim), name="active_set", dtype=hcl.Float())
 
     # Positions vector
@@ -75,7 +72,6 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
             with hcl.for_(0, V_init.shape[0], name="i") as i:  # Plus 1 as for loop count stops at V_init.shape[0]
                 with hcl.for_(0, V_init.shape[1], name="j") as j:
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
-
                         with hcl.if_(active_set[i, j, k] > 0.1):
                             # Variables to calculate dV_dx
                             dV_dx_L = hcl.scalar(0, "dV_dx_L")
@@ -117,10 +113,10 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                                                     (dV_dx[0], dV_dy[0], dV_dT[0]))
 
                             # Calculate dynamical rates of changes
-                            dx_dt, dy_dt, dtheta_dt = my_object.dynamics(t, (x1[i], x2[j], x3[k]), uOpt, dOpt)
+                            dx1_dt, dx2_dt, dx3_dt = my_object.dynamics(t, (x1[i], x2[j], x3[k]), uOpt, dOpt)
 
                             # Calculate Hamiltonian terms:
-                            V_new[i, j, k] = -(dx_dt * dV_dx[0] + dy_dt * dV_dy[0] + dtheta_dt * dV_dT[0])
+                            V_new[i, j, k] = -(dx1_dt * dV_dx[0] + dx2_dt * dV_dy[0] + dx3_dt * dV_dT[0])
 
                             # Get derivMin
                             with hcl.if_(dV_dx_L[0] < min_deriv1[0]):
