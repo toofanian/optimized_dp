@@ -150,22 +150,22 @@ compMethods = { "TargetSetMode": "minVWithV0"}
 solver = HJSolverClass()
 result = solver(my_car, g, Initial_value_f, tau, compMethods, po, saveAllTimeSteps=True)
 
-last_time_step_result = result[..., 0]
-
-# Compute spatial derivatives at every state
-x_derivative = computeSpatDerivArray(g, last_time_step_result, deriv_dim=1, accuracy="low")
-y_derivative = computeSpatDerivArray(g, last_time_step_result, deriv_dim=2, accuracy="low")
-v_derivative = computeSpatDerivArray(g, last_time_step_result, deriv_dim=3, accuracy="low")
-T_derivative = computeSpatDerivArray(g, last_time_step_result, deriv_dim=4, accuracy="low")
-
-# Let's compute optimal control at some random idices
-spat_deriv_vector = (x_derivative[10,20,15,15], y_derivative[10,20,15,15],
-                     v_derivative[10,20,15,15], T_derivative[10,20,15,15])
-
-# Compute the optimal control
-opt_a, opt_w = my_car.optCtrl_inPython(spat_deriv_vector)
-print("Optimal accel is {}\n".format(opt_a))
-print("Optimal rotation is {}\n".format(opt_w))
+# last_time_step_result = result[..., 0]
+#
+# # Compute spatial derivatives at every state
+# x_derivative = computeSpatDerivArray(g, last_time_step_result, deriv_dim=1, accuracy="low")
+# y_derivative = computeSpatDerivArray(g, last_time_step_result, deriv_dim=2, accuracy="low")
+# v_derivative = computeSpatDerivArray(g, last_time_step_result, deriv_dim=3, accuracy="low")
+# T_derivative = computeSpatDerivArray(g, last_time_step_result, deriv_dim=4, accuracy="low")
+#
+# # Let's compute optimal control at some random idices
+# spat_deriv_vector = (x_derivative[10,20,15,15], y_derivative[10,20,15,15],
+#                      v_derivative[10,20,15,15], T_derivative[10,20,15,15])
+#
+# # Compute the optimal control
+# opt_a, opt_w = my_car.optCtrl_inPython(spat_deriv_vector)
+# print("Optimal accel is {}\n".format(opt_a))
+# print("Optimal rotation is {}\n".format(opt_w))
 
 # ##################################################### EXAMPLE 3 #####################################################
 
