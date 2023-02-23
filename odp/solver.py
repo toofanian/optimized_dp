@@ -148,8 +148,8 @@ class HJSolverClass:
         # Tensors input to our computation graph
         V_0 = hcl.asarray(init_value)
         V_1 = hcl.asarray(np.zeros(tuple(grid.pts_each_dim)))
-        if active_set is None:
-            active_set = np.ones(tuple(grid.pts_each_dim))
+        # if active_set is None:
+        active_set = np.ones(tuple(grid.pts_each_dim))
         dummy_flags = hcl.asarray(active_set)
         # dummy_flags = hcl.asarray(np.random.randint(0, 2, size=tuple(grid.pts_each_dim)))
         # dummy_flags = hcl.asarray(np.zeros(tuple(grid.pts_each_dim)))
@@ -175,11 +175,11 @@ class HJSolverClass:
                 if grid.dims == 3:
                     self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, t_minh, self.l0, dummy_flags)
                 if grid.dims == 4:
-                    self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, self.list_x4, t_minh, self.l0)
+                    self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, self.list_x4, t_minh, self.l0, dummy_flags)
                 if grid.dims == 5:
-                    self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, self.list_x4, self.list_x5 ,t_minh, self.l0)
+                    self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, self.list_x4, self.list_x5 ,t_minh, self.l0, dummy_flags)
                 if grid.dims == 6:
-                    self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, self.list_x4, self.list_x5, self.list_x6, t_minh, self.l0)
+                    self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, self.list_x4, self.list_x5, self.list_x6, t_minh, self.l0, dummy_flags)
 
                 tNow = t_minh.asnumpy()[0]
 

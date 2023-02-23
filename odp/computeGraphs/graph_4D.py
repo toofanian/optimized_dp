@@ -11,7 +11,7 @@ def graph_4D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
     l0 = hcl.placeholder(tuple(g.pts_each_dim), name="l0", dtype=hcl.Float())
     t = hcl.placeholder((2,), name="t", dtype=hcl.Float())
     probe = hcl.placeholder(tuple(g.pts_each_dim), name="probe", dtype=hcl.Float())
-    active_set_holder = hcl.placeholder(tuple(g.pts_each_dim), name="active_set_holder", dtype=hcl.Int())
+    active_set_holder = hcl.placeholder(tuple(g.pts_each_dim), name="active_set", dtype=hcl.Float())
 
 
     # Positions vector
@@ -83,7 +83,7 @@ def graph_4D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                 with hcl.for_(0, V_init.shape[1], name="j") as j:
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
                         with hcl.for_(0, V_init.shape[3], name="l") as l:
-                            with hcl.if_(active_set[i, j, k, l] == 1):
+                            with hcl.if_(active_set[i, j, k, l] > .1):
                                 # Variables to calculate dV_dx
                                 dV_dx1_L = hcl.scalar(0, "dV_dx1_L")
                                 dV_dx1_R = hcl.scalar(0, "dV_dx1_R")
@@ -233,7 +233,7 @@ def graph_4D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                 with hcl.for_(0, V_init.shape[1], name="j") as j:
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
                         with hcl.for_(0, V_init.shape[3], name="l") as l:
-                            with hcl.if_(active_set[i, j, k, l] == 1):
+                            with hcl.if_(active_set[i, j, k, l] > .1):
                                 dx_LL1 = hcl.scalar(0, "dx_LL1")
                                 dx_LL2 = hcl.scalar(0, "dx_LL2")
                                 dx_LL3 = hcl.scalar(0, "dx_LL3")
