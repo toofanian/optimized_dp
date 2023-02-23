@@ -82,74 +82,108 @@ def solveValueIteration(MDP_obj):
 class HJSolverClass:
     initialized = False
 
-    def initialize(self, dynamics_obj, grid, init_value, tau, compMethod,
-                 plot_option, saveAllTimeSteps=False,
-                 accuracy="low", untilConvergent=False, epsilon=2e-3, verbose=True):
-            if verbose:
-                print("Welcome to optimized_dp \n")
-            # if type(multiple_value) == list:
-            #     # We have both goal and obstacle set
-            #     self.target = multiple_value[0] # Target set
-            #     self.constraint = multiple_value[1] # Obstacle set
-            # else:
-            #     self.target = multiple_value
-            #     self.constraint = None
-            self.target = init_value
-            hcl.init()
-            hcl.config.init_dtype = hcl.Float(32)
+    def initialize(
+            self,
+            dynamics_obj,
+            grid,
+            init_value,
+            tau,
+            compMethod,
+            plot_option,
+            saveAllTimeSteps=False,
+            accuracy="low",
+            untilConvergent=False,
+            epsilon=2e-3,
+            verbose=True
+    ):
+        if verbose:
+            print("Welcome to optimized_dp \n")
+        # if type(multiple_value) == list:
+        #     # We have both goal and obstacle set
+        #     self.target = multiple_value[0] # Target set
+        #     self.constraint = multiple_value[1] # Obstacle set
+        # else:
+        #     self.target = multiple_value
+        #     self.constraint = None
+        self.target = init_value
+        hcl.init()
+        hcl.config.init_dtype = hcl.Float(32)
 
-            if verbose:
-                print("Initializing\n")
+        if verbose:
+            print("Initializing\n")
 
-            # Array for each state values
-            list_x1 = np.reshape(grid.vs[0], grid.pts_each_dim[0])
-            list_x2 = np.reshape(grid.vs[1], grid.pts_each_dim[1])
-            list_x3 = np.reshape(grid.vs[2], grid.pts_each_dim[2])
-            if grid.dims >= 4:
-                list_x4 = np.reshape(grid.vs[3], grid.pts_each_dim[3])
-            if grid.dims >= 5:
-                list_x5 = np.reshape(grid.vs[4], grid.pts_each_dim[4])
-            if grid.dims >= 6:
-                list_x6 = np.reshape(grid.vs[5], grid.pts_each_dim[5])
-            # Convert state arrays to hcl array type
-            self.list_x1 = hcl.asarray(list_x1)
-            self.list_x2 = hcl.asarray(list_x2)
-            self.list_x3 = hcl.asarray(list_x3)
-            if grid.dims >= 4:
-                self.list_x4 = hcl.asarray(list_x4)
-            if grid.dims >= 5:
-                self.list_x5 = hcl.asarray(list_x5)
-            if grid.dims >= 6:
-                self.list_x6 = hcl.asarray(list_x6)
+        # Array for each state values
+        list_x1 = np.reshape(grid.vs[0], grid.pts_each_dim[0])
+        list_x2 = np.reshape(grid.vs[1], grid.pts_each_dim[1])
+        list_x3 = np.reshape(grid.vs[2], grid.pts_each_dim[2])
+        if grid.dims >= 4:
+            list_x4 = np.reshape(grid.vs[3], grid.pts_each_dim[3])
+        if grid.dims >= 5:
+            list_x5 = np.reshape(grid.vs[4], grid.pts_each_dim[4])
+        if grid.dims >= 6:
+            list_x6 = np.reshape(grid.vs[5], grid.pts_each_dim[5])
+        # Convert state arrays to hcl array type
+        self.list_x1 = hcl.asarray(list_x1)
+        self.list_x2 = hcl.asarray(list_x2)
+        self.list_x3 = hcl.asarray(list_x3)
+        if grid.dims >= 4:
+            self.list_x4 = hcl.asarray(list_x4)
+        if grid.dims >= 5:
+            self.list_x5 = hcl.asarray(list_x5)
+        if grid.dims >= 6:
+            self.list_x6 = hcl.asarray(list_x6)
 
-            # Get executable, obstacle check intial value function
-            if grid.dims == 3:
-                self.solve_pde = graph_3D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
+        # Get executable, obstacle check intial value function
+        if grid.dims == 3:
+            self.solve_pde = graph_3D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
 
-            if grid.dims == 4:
-                self.solve_pde = graph_4D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
+        if grid.dims == 4:
+            self.solve_pde = graph_4D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
 
-            if grid.dims == 5:
-                self.solve_pde = graph_5D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
+        if grid.dims == 5:
+            self.solve_pde = graph_5D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
 
-            if grid.dims == 6:
-                self.solve_pde = graph_6D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
-            self.l0 = hcl.asarray(init_value)
-            self.initialized = True
-            self.execution_time = 0
+        if grid.dims == 6:
+            self.solve_pde = graph_6D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
+        self.l0 = hcl.asarray(init_value)
+        self.initialized = True
+        self.execution_time = 0
             
-    def __call__(self, dynamics_obj, grid, init_value, tau, compMethod,
-                 plot_option, saveAllTimeSteps=False,
-                 accuracy="low", untilConvergent=False, epsilon=2e-3, active_set=None, verbose=True):
+    def __call__(
+            self,
+            dynamics_obj,
+            grid,
+            init_value,
+            tau,
+            compMethod,
+            plot_option,
+            saveAllTimeSteps=False,
+            accuracy="low",
+            untilConvergent=False,
+            epsilon=2e-3,
+            active_set=None,
+            verbose=True
+    ):
         if not self.initialized:
-            self.initialize(dynamics_obj, grid, init_value, tau, compMethod,
-                 plot_option, saveAllTimeSteps,
-                 accuracy, untilConvergent, epsilon, verbose=verbose)
+            self.initialize(
+                dynamics_obj,
+                grid,
+                init_value,
+                tau,
+                compMethod,
+                plot_option,
+                saveAllTimeSteps,
+                accuracy,
+                untilConvergent,
+                epsilon,
+                verbose=verbose
+            )
         # Tensors input to our computation graph
         V_0 = hcl.asarray(init_value)
-        V_1 = hcl.asarray(np.zeros(tuple(grid.pts_each_dim)))
-        # if active_set is None:
-        active_set = np.ones(tuple(grid.pts_each_dim))
+        # V_1 = hcl.asarray(np.zeros(tuple(grid.pts_each_dim))) #TODO is this ok for active set??
+        V_1 = hcl.asarray(init_value)
+        if active_set is None:
+            active_set = np.ones(tuple(grid.pts_each_dim))
         dummy_flags = hcl.asarray(active_set)
         # dummy_flags = hcl.asarray(np.random.randint(0, 2, size=tuple(grid.pts_each_dim)))
         # dummy_flags = hcl.asarray(np.zeros(tuple(grid.pts_each_dim)))
