@@ -21,8 +21,8 @@ def plot_2d(grid, V, plot_option):
     # Take the two dims from the plot
     dim1, dim2 = dims_plot[0], dims_plot[1]
 
-    my_V_start = V[..., -1][tuple(idx)]
-    my_V_end = V[..., 0][tuple(idx)]
+    my_V_start = np.swapaxes(V[..., -1], dim1, dim2)[tuple(idx)]
+    my_V_end = np.swapaxes(V[..., 0], dim1, dim2)[tuple(idx)]
     complex_x = complex(0, grid.pts_each_dim[dim1])
     complex_y = complex(0, grid.pts_each_dim[dim2])
     mg_X, mg_Y = np.mgrid[grid.min[dim1] : grid.max[dim1] : complex_x, grid.min[dim2] : grid.max[dim2] : complex_y]
