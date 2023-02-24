@@ -59,6 +59,10 @@ def graph_4D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
             t[0] = t[0] + stepBound[0]
             return stepBound[0]
 
+        # def active_set_integrate(i, j, k, l):
+        #     with hcl.if_(active_set[i, j, k, l] > .1):
+        #         V_new[i, j, k, l] = V_init[i, j, k, l] + V_new[i, j, k, l] * delta_t[0]
+
         # Min with V_before
         def minVWithVInit(i, j, k, l):
             with hcl.if_(V_new[i, j, k, l] > V_init[i, j, k, l]):
@@ -343,6 +347,7 @@ def graph_4D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
         delta_t = hcl.compute((1,), lambda x: step_bound(), name="delta_t")
         # Integrate
         result = hcl.update(V_new, lambda i, j, k, l: V_init[i, j, k, l] + V_new[i, j, k, l] * delta_t[0])
+        # result = hcl.update(V_new, lambda i, j, k, l: active_set_integrate(i, j, k, l))
         # Different computation method check
         if compMethod == 'maxVWithV0' or compMethod == 'maxVWithVTarget':
             result = hcl.update(V_new, lambda i, j, k, l: maxVWithV0(i, j, k, l))
