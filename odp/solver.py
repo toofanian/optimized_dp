@@ -180,8 +180,7 @@ class HJSolverClass:
             )
         # Tensors input to our computation graph
         V_0 = hcl.asarray(init_value)
-        # V_1 = hcl.asarray(np.zeros(tuple(grid.pts_each_dim))) #TODO is this ok for active set??
-        V_1 = hcl.asarray(init_value)
+        V_1 = hcl.asarray(np.zeros(tuple(grid.pts_each_dim)))
         if active_set is None:
             active_set = np.ones(tuple(grid.pts_each_dim), dtype=float)
         dummy_flags = hcl.asarray(active_set, dtype=hcl.Float())
