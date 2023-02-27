@@ -94,7 +94,8 @@ class HJSolverClass:
             accuracy="low",
             untilConvergent=False,
             epsilon=2e-3,
-            verbose=True
+            verbose=True,
+            int_scheme="first"
     ):
         if verbose:
             print("Welcome to optimized_dp \n")
@@ -132,13 +133,13 @@ class HJSolverClass:
             self.list_x5 = hcl.asarray(list_x5)
         if grid.dims >= 6:
             self.list_x6 = hcl.asarray(list_x6)
-
         # Get executable, obstacle check intial value function
+        print(f"Integration scheme of {int_scheme} order")
         if grid.dims == 3:
-            self.solve_pde = graph_3D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
+            self.solve_pde = graph_3D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose, int_scheme=int_scheme)
 
         if grid.dims == 4:
-            self.solve_pde = graph_4D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
+            self.solve_pde = graph_4D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose, int_scheme=int_scheme)
 
         if grid.dims == 5:
             self.solve_pde = graph_5D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
@@ -162,7 +163,8 @@ class HJSolverClass:
             untilConvergent=False,
             epsilon=2e-3,
             active_set=None,
-            verbose=True
+            verbose=True,
+            int_scheme="third"
     ):
         if not self.initialized:
             self.initialize(
@@ -176,7 +178,8 @@ class HJSolverClass:
                 accuracy,
                 untilConvergent,
                 epsilon,
-                verbose=verbose
+                verbose=verbose,
+                int_scheme=int_scheme
             )
         # Tensors input to our computation graph
         V_0 = hcl.asarray(init_value)
