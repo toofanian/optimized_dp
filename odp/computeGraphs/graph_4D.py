@@ -620,7 +620,7 @@ def graph_4D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
             hcl.update(V_new, lambda i, j, k, l: 0.5 * (V_new[i, j, k, l] + V_inter[i, j, k, l]))
 
         if int_scheme == "third":
-            hcl.update(V_inter, lambda i, j, k, l: V_init[i, j, k, l])
+            hcl.update(V_new, lambda i, j, k, l: 0.75 * V_inter[i, j, k, l] + 0.25 * V_new[i, j, k, l])
             hcl.update(V_init, lambda i, j, k, l: V_new[i, j, k, l])
             with hcl.Stage("Hamiltonian"):
                 with hcl.for_(0, V_init.shape[0], name="i") as i:
