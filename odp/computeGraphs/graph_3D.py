@@ -19,6 +19,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
     x3 = hcl.placeholder((g.pts_each_dim[2],), name="x3", dtype=hcl.Float())
     def graph_create(V_new, V_init, x1, x2, x3, t, l0, active_set):
         V_inter = hcl.compute(V_init.shape, lambda *x: 0, "V_inter")
+        hcl.update(V_new, lambda *x: 0)
 
         # Specify intermediate tensors
         deriv_diff1 = hcl.compute(V_init.shape, lambda *x: 0, "deriv_diff1")
@@ -270,8 +271,6 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                             with hcl.if_(alpha3[0] > max_alpha3[0]):
                                 max_alpha3[0] = alpha3[0]
 
-
-
         # Determine time step
         delta_t = hcl.compute((1,), lambda x: step_bound(), name="delta_t")
         # Integrate
@@ -281,6 +280,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
             # Copy V_new to V_init
             hcl.update(V_inter, lambda i, j, k: V_init[i, j, k])
             hcl.update(V_init, lambda i, j, k: V_new[i, j, k])
+            hcl.update(V_new, lambda *x: 0)
 
             # Calculate Hamiltonian for every grid point in V_init
             with hcl.Stage("Hamiltonian"):
@@ -489,7 +489,10 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
             
         if int_scheme == "third":
             hcl.update(V_new, lambda i, j, k: 0.75 * V_inter[i, j, k] + 0.25 * V_new[i, j, k])
+
             hcl.update(V_init, lambda i, j, k: V_new[i, j, k])
+            hcl.update(V_new, lambda *x: 0)
+
             # Calculate Hamiltonian for every grid point in V_init
             with hcl.Stage("Hamiltonian"):
                 with hcl.for_(0, V_init.shape[0], name="i") as i:  # Plus 1 as for loop count stops at V_init.shape[0]
@@ -694,6 +697,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
             result = hcl.update(V_new, lambda i, j, k: V_init[i, j, k] + V_new[i, j, k] * delta_t[0])
 
             hcl.update(V_new, lambda i, j, k: (1.0/3.0) * V_inter[i, j, k] + (2.0/3.0) * V_new[i, j, k])
+
         # Different computation method check
         if compMethod == 'maxVWithV0' or compMethod == 'maxVWithVTarget':
             result = hcl.update(V_new, lambda i, j, k: maxVWithV0(i, j, k))
@@ -706,6 +710,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
 
         # Copy V_new to V_init
         hcl.update(V_init, lambda i, j, k: V_new[i, j, k])
+
         return result
 
     def returnDerivative(V_array, Deriv_array):
@@ -749,9 +754,4 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
         print("I'm here\n")
         s = hcl.create_schedule([V_init, V_f], returnDerivative)
 
-    # Inspect IR
-    # if args.llvm:
-        #print(hcl.lower(s))
-
-    # Return executable
-    return (hcl.build(s))
+    return hcl.build(s)

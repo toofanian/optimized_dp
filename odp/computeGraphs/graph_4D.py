@@ -20,6 +20,8 @@ def graph_4D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
 
     def graph_create(V_new, V_init, x1, x2, x3, x4, t, l0, active_set):
         V_inter = hcl.compute(V_init.shape, lambda *x: 0, "V_inter")
+        hcl.update(V_new, lambda *x: 0)
+
 
         # Specify intermediate tensors
         deriv_diff1 = hcl.compute(V_init.shape, lambda *x:0, "deriv_diff1")
@@ -354,6 +356,8 @@ def graph_4D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
             # Copy V_new to V_init and keep V_inter as placeholder for V_init
             hcl.update(V_inter, lambda i, j, k, l: V_init[i, j, k, l])
             hcl.update(V_init, lambda i, j, k, l: V_new[i, j, k, l])
+            hcl.update(V_new, lambda *x: 0)
+
             with hcl.Stage("Hamiltonian"):
                 with hcl.for_(0, V_init.shape[0], name="i") as i:
                     with hcl.for_(0, V_init.shape[1], name="j") as j:
@@ -622,6 +626,8 @@ def graph_4D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
         if int_scheme == "third":
             hcl.update(V_new, lambda i, j, k, l: 0.75 * V_inter[i, j, k, l] + 0.25 * V_new[i, j, k, l])
             hcl.update(V_init, lambda i, j, k, l: V_new[i, j, k, l])
+            hcl.update(V_new, lambda *x: 0)
+
             with hcl.Stage("Hamiltonian"):
                 with hcl.for_(0, V_init.shape[0], name="i") as i:
                     with hcl.for_(0, V_init.shape[1], name="j") as j:
