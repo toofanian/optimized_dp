@@ -67,11 +67,12 @@ vals = [initial_value_f]
 t_total = 0
 import time
 init_time = time.time()
-for i in range(3):
+for i in range(20):
     # TODO: Analyze how much extra time this takes
     # active_set = np.random.randint(0, 2, size=initial_value_f.shape)
     active_set = old_vals > -0.1
-    new_vals = solver(my_car, g, old_vals, tau, compMethods, po2, saveAllTimeSteps=False, active_set=active_set)
+    # active_set = np.ones_like(old_vals)
+    new_vals = solver(my_car, g, old_vals, tau, compMethods, po2, saveAllTimeSteps=False, active_set=active_set, int_scheme="first")
     t_total += tau[1]
     vals += [new_vals]
     old_vals = new_vals
