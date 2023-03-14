@@ -4,9 +4,19 @@ from odp.computeGraphs.CustomGraphFunctions import *
 from odp.spatialDerivatives.first_orderENO3D import *
 from odp.spatialDerivatives.second_orderENO3D import *
 
-#from user_definer import *
-#def graph_3D(dynamics_obj, grid):
-def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv_dim=1, verbose=True, int_scheme="first"):
+# from user_definer import *
+# def graph_3D(dynamics_obj, grid):
+def graph_3D(
+    my_object,
+    g,
+    compMethod,
+    accuracy,
+    generate_SpatDeriv=False,
+    deriv_dim=1,
+    verbose=True,
+    int_scheme="first",
+    global_minimizing=False,
+):
     V_f = hcl.placeholder(tuple(g.pts_each_dim), name="V_f", dtype=hcl.Float())
     V_init = hcl.placeholder(tuple(g.pts_each_dim), name="V_init", dtype=hcl.Float())
     l0 = hcl.placeholder(tuple(g.pts_each_dim), name="l0", dtype=hcl.Float())
@@ -17,7 +27,10 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
     x1 = hcl.placeholder((g.pts_each_dim[0],), name="x1", dtype=hcl.Float())
     x2 = hcl.placeholder((g.pts_each_dim[1],), name="x2", dtype=hcl.Float())
     x3 = hcl.placeholder((g.pts_each_dim[2],), name="x3", dtype=hcl.Float())
-    def graph_create(V_new, V_init, x1, x2, x3, t, l0, active_set):
+
+    global_minimizer_ph = hcl.placeholder((1,), name="global_minimizer", dtype=hcl.Float())
+
+    def graph_create(V_new, V_init, x1, x2, x3, t, l0, active_set, global_minimizer):
         V_inter = hcl.compute(V_init.shape, lambda *x: 0, "V_inter")
         hcl.update(V_new, lambda *x: 0)
 
@@ -40,6 +53,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
         max_alpha1 = hcl.scalar(-1e9, "max_alpha1")
         max_alpha2 = hcl.scalar(-1e9, "max_alpha2")
         max_alpha3 = hcl.scalar(-1e9, "max_alpha3")
+
         def step_bound():  # Function to calculate time step
             stepBoundInv = hcl.scalar(0, "stepBoundInv")
             stepBound = hcl.scalar(0, "stepBound")
@@ -53,7 +67,11 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
             t[0] = t[0] + stepBound[0]
             return stepBound[0]
 
+        def minVglobally(i, j, k):
+            with hcl.if_(V_new[i, j, k] < global_minimizer):
+                V_new[i, j, k] = global_minimizer[0]
             # Min with V_before
+
         def minVWithVInit(i, j, k):
             with hcl.if_(V_new[i, j, k] > V_init[i, j, k]):
                 V_new[i, j, k] = V_init[i, j, k]
@@ -110,10 +128,8 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                             dV_dT[0] = (dV_dT_L + dV_dT_R) / 2
 
                             # Use method of DubinsCar to solve optimal control instead
-                            uOpt = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]),
-                                                        (dV_dx[0], dV_dy[0], dV_dT[0]))
-                            dOpt = my_object.opt_dstb(t, (x1[i], x2[j], x3[k]),
-                                                    (dV_dx[0], dV_dy[0], dV_dT[0]))
+                            uOpt = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]), (dV_dx[0], dV_dy[0], dV_dT[0]))
+                            dOpt = my_object.opt_dstb(t, (x1[i], x2[j], x3[k]), (dV_dx[0], dV_dy[0], dV_dT[0]))
 
                             # Calculate dynamical rates of changes
                             dx1_dt, dx2_dt, dx3_dt = my_object.dynamics(t, (x1[i], x2[j], x3[k]), uOpt, dOpt)
@@ -199,31 +215,40 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                             dx_LU3 = hcl.scalar(0, "dx_LU3")
 
                             # Find LOWER BOUND optimal disturbance
-                            dOptL1[0], dOptL2[0], dOptL3[0] = my_object.opt_dstb(t,  (x1[i], x2[j], x3[k]),\
-                                                                                (min_deriv1[0], min_deriv2[0],min_deriv3[0]))
+                            dOptL1[0], dOptL2[0], dOptL3[0] = my_object.opt_dstb(
+                                t, (x1[i], x2[j], x3[k]), (min_deriv1[0], min_deriv2[0], min_deriv3[0])
+                            )
 
-                            dOptU1[0], dOptU2[0], dOptU3[0] = my_object.opt_dstb(t, (x1[i], x2[j], x3[k]),\
-                                                                                (max_deriv1[0], max_deriv2[0],max_deriv3[0]))
+                            dOptU1[0], dOptU2[0], dOptU3[0] = my_object.opt_dstb(
+                                t, (x1[i], x2[j], x3[k]), (max_deriv1[0], max_deriv2[0], max_deriv3[0])
+                            )
 
                             # Find LOWER BOUND optimal control
-                            uOptL1[0], uOptL2[0], uOptL3[0] = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]), \
-                                                                                            (min_deriv1[0], min_deriv2[0],min_deriv3[0]))
+                            uOptL1[0], uOptL2[0], uOptL3[0] = my_object.opt_ctrl(
+                                t, (x1[i], x2[j], x3[k]), (min_deriv1[0], min_deriv2[0], min_deriv3[0])
+                            )
 
                             # Find UPPER BOUND optimal control
-                            uOptU1[0], uOptU2[0], uOptU3[0] = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]),
-                                                                                            (max_deriv1[0], max_deriv2[0],
-                                                                                            max_deriv3[0]))
+                            uOptU1[0], uOptU2[0], uOptU3[0] = my_object.opt_ctrl(
+                                t, (x1[i], x2[j], x3[k]), (max_deriv1[0], max_deriv2[0], max_deriv3[0])
+                            )
                             # Find magnitude of rates of changes
-                            dx_LL1[0], dx_LL2[0], dx_LL3[0] = my_object.dynamics(t, (x1[i], x2[j], x3[k]),
-                                                                                            (uOptL1[0], uOptL2[0], uOptL3[0]), \
-                                                                                            (dOptL1[0], dOptL2[0], dOptL3[0]))
+                            dx_LL1[0], dx_LL2[0], dx_LL3[0] = my_object.dynamics(
+                                t,
+                                (x1[i], x2[j], x3[k]),
+                                (uOptL1[0], uOptL2[0], uOptL3[0]),
+                                (dOptL1[0], dOptL2[0], dOptL3[0]),
+                            )
                             dx_LL1[0] = my_abs(dx_LL1[0])
                             dx_LL2[0] = my_abs(dx_LL2[0])
                             dx_LL3[0] = my_abs(dx_LL3[0])
 
-                            dx_LU1[0], dx_LU2[0], dx_LU3[0] = my_object.dynamics(t, (x1[i], x2[j], x3[k]),
-                                                                                            (uOptL1[0], uOptL2[0], uOptL3[0]), \
-                                                                                            (dOptU1[0], dOptU2[0], dOptU3[0]))
+                            dx_LU1[0], dx_LU2[0], dx_LU3[0] = my_object.dynamics(
+                                t,
+                                (x1[i], x2[j], x3[k]),
+                                (uOptL1[0], uOptL2[0], uOptL3[0]),
+                                (dOptU1[0], dOptU2[0], dOptU3[0]),
+                            )
                             dx_LU1[0] = my_abs(dx_LU1[0])
                             dx_LU2[0] = my_abs(dx_LU2[0])
                             dx_LU3[0] = my_abs(dx_LU3[0])
@@ -233,9 +258,12 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                             alpha2[0] = my_max(dx_LL2[0], dx_LU2[0])
                             alpha3[0] = my_max(dx_LL3[0], dx_LU3[0])
 
-                            dx_UL1[0], dx_UL2[0], dx_UL3[0]= my_object.dynamics(t, (x1[i], x2[j], x3[k]),\
-                                                                                                (uOptU1[0], uOptU2[0], uOptU3[0]), \
-                                                                                                (dOptL1[0], dOptL2[0], dOptL3[0]))
+                            dx_UL1[0], dx_UL2[0], dx_UL3[0] = my_object.dynamics(
+                                t,
+                                (x1[i], x2[j], x3[k]),
+                                (uOptU1[0], uOptU2[0], uOptU3[0]),
+                                (dOptL1[0], dOptL2[0], dOptL3[0]),
+                            )
                             dx_UL1[0] = my_abs(dx_UL1[0])
                             dx_UL2[0] = my_abs(dx_UL2[0])
                             dx_UL3[0] = my_abs(dx_UL3[0])
@@ -245,9 +273,12 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                             alpha2[0] = my_max(alpha2[0], dx_UL2[0])
                             alpha3[0] = my_max(alpha3[0], dx_UL3[0])
 
-                            dx_UU1[0], dx_UU2[0], dx_UU3[0] = my_object.dynamics(t, (x1[i], x2[j], x3[k]),
-                                                                                                (uOptU1[0], uOptU2[0], uOptU3[0]),\
-                                                                                                (dOptU1[0], dOptU2[0], dOptU3[0]))
+                            dx_UU1[0], dx_UU2[0], dx_UU3[0] = my_object.dynamics(
+                                t,
+                                (x1[i], x2[j], x3[k]),
+                                (uOptU1[0], uOptU2[0], uOptU3[0]),
+                                (dOptU1[0], dOptU2[0], dOptU3[0]),
+                            )
                             dx_UU1[0] = my_abs(dx_UU1[0])
                             dx_UU2[0] = my_abs(dx_UU2[0])
                             dx_UU3[0] = my_abs(dx_UU3[0])
@@ -258,7 +289,10 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
 
                             diss = hcl.scalar(0, "diss")
                             diss[0] = 0.5 * (
-                                    deriv_diff1[i, j, k] * alpha1[0] + deriv_diff2[i, j, k] * alpha2[0] + deriv_diff3[i, j, k] * alpha3[0])
+                                deriv_diff1[i, j, k] * alpha1[0]
+                                + deriv_diff2[i, j, k] * alpha2[0]
+                                + deriv_diff3[i, j, k] * alpha3[0]
+                            )
 
                             # Finally
                             V_new[i, j, k] = -(V_new[i, j, k] - diss[0])
@@ -322,10 +356,8 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                                 dV_dT[0] = (dV_dT_L + dV_dT_R) / 2
 
                                 # Use method of DubinsCar to solve optimal control instead
-                                uOpt = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]),
-                                                            (dV_dx[0], dV_dy[0], dV_dT[0]))
-                                dOpt = my_object.opt_dstb(t, (x1[i], x2[j], x3[k]),
-                                                        (dV_dx[0], dV_dy[0], dV_dT[0]))
+                                uOpt = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]), (dV_dx[0], dV_dy[0], dV_dT[0]))
+                                dOpt = my_object.opt_dstb(t, (x1[i], x2[j], x3[k]), (dV_dx[0], dV_dy[0], dV_dT[0]))
 
                                 # Calculate dynamical rates of changes
                                 dx1_dt, dx2_dt, dx3_dt = my_object.dynamics(t, (x1[i], x2[j], x3[k]), uOpt, dOpt)
@@ -411,31 +443,40 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                                 dx_LU3 = hcl.scalar(0, "dx_LU3")
 
                                 # Find LOWER BOUND optimal disturbance
-                                dOptL1[0], dOptL2[0], dOptL3[0] = my_object.opt_dstb(t,  (x1[i], x2[j], x3[k]),\
-                                                                                    (min_deriv1[0], min_deriv2[0],min_deriv3[0]))
+                                dOptL1[0], dOptL2[0], dOptL3[0] = my_object.opt_dstb(
+                                    t, (x1[i], x2[j], x3[k]), (min_deriv1[0], min_deriv2[0], min_deriv3[0])
+                                )
 
-                                dOptU1[0], dOptU2[0], dOptU3[0] = my_object.opt_dstb(t, (x1[i], x2[j], x3[k]),\
-                                                                                    (max_deriv1[0], max_deriv2[0],max_deriv3[0]))
+                                dOptU1[0], dOptU2[0], dOptU3[0] = my_object.opt_dstb(
+                                    t, (x1[i], x2[j], x3[k]), (max_deriv1[0], max_deriv2[0], max_deriv3[0])
+                                )
 
                                 # Find LOWER BOUND optimal control
-                                uOptL1[0], uOptL2[0], uOptL3[0] = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]), \
-                                                                                                (min_deriv1[0], min_deriv2[0],min_deriv3[0]))
+                                uOptL1[0], uOptL2[0], uOptL3[0] = my_object.opt_ctrl(
+                                    t, (x1[i], x2[j], x3[k]), (min_deriv1[0], min_deriv2[0], min_deriv3[0])
+                                )
 
                                 # Find UPPER BOUND optimal control
-                                uOptU1[0], uOptU2[0], uOptU3[0] = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]),
-                                                                                                (max_deriv1[0], max_deriv2[0],
-                                                                                                max_deriv3[0]))
+                                uOptU1[0], uOptU2[0], uOptU3[0] = my_object.opt_ctrl(
+                                    t, (x1[i], x2[j], x3[k]), (max_deriv1[0], max_deriv2[0], max_deriv3[0])
+                                )
                                 # Find magnitude of rates of changes
-                                dx_LL1[0], dx_LL2[0], dx_LL3[0] = my_object.dynamics(t, (x1[i], x2[j], x3[k]),
-                                                                                                (uOptL1[0], uOptL2[0], uOptL3[0]), \
-                                                                                                (dOptL1[0], dOptL2[0], dOptL3[0]))
+                                dx_LL1[0], dx_LL2[0], dx_LL3[0] = my_object.dynamics(
+                                    t,
+                                    (x1[i], x2[j], x3[k]),
+                                    (uOptL1[0], uOptL2[0], uOptL3[0]),
+                                    (dOptL1[0], dOptL2[0], dOptL3[0]),
+                                )
                                 dx_LL1[0] = my_abs(dx_LL1[0])
                                 dx_LL2[0] = my_abs(dx_LL2[0])
                                 dx_LL3[0] = my_abs(dx_LL3[0])
 
-                                dx_LU1[0], dx_LU2[0], dx_LU3[0] = my_object.dynamics(t, (x1[i], x2[j], x3[k]),
-                                                                                                (uOptL1[0], uOptL2[0], uOptL3[0]), \
-                                                                                                (dOptU1[0], dOptU2[0], dOptU3[0]))
+                                dx_LU1[0], dx_LU2[0], dx_LU3[0] = my_object.dynamics(
+                                    t,
+                                    (x1[i], x2[j], x3[k]),
+                                    (uOptL1[0], uOptL2[0], uOptL3[0]),
+                                    (dOptU1[0], dOptU2[0], dOptU3[0]),
+                                )
                                 dx_LU1[0] = my_abs(dx_LU1[0])
                                 dx_LU2[0] = my_abs(dx_LU2[0])
                                 dx_LU3[0] = my_abs(dx_LU3[0])
@@ -445,9 +486,12 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                                 alpha2[0] = my_max(dx_LL2[0], dx_LU2[0])
                                 alpha3[0] = my_max(dx_LL3[0], dx_LU3[0])
 
-                                dx_UL1[0], dx_UL2[0], dx_UL3[0]= my_object.dynamics(t, (x1[i], x2[j], x3[k]),\
-                                                                                                    (uOptU1[0], uOptU2[0], uOptU3[0]), \
-                                                                                                    (dOptL1[0], dOptL2[0], dOptL3[0]))
+                                dx_UL1[0], dx_UL2[0], dx_UL3[0] = my_object.dynamics(
+                                    t,
+                                    (x1[i], x2[j], x3[k]),
+                                    (uOptU1[0], uOptU2[0], uOptU3[0]),
+                                    (dOptL1[0], dOptL2[0], dOptL3[0]),
+                                )
                                 dx_UL1[0] = my_abs(dx_UL1[0])
                                 dx_UL2[0] = my_abs(dx_UL2[0])
                                 dx_UL3[0] = my_abs(dx_UL3[0])
@@ -457,9 +501,12 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                                 alpha2[0] = my_max(alpha2[0], dx_UL2[0])
                                 alpha3[0] = my_max(alpha3[0], dx_UL3[0])
 
-                                dx_UU1[0], dx_UU2[0], dx_UU3[0] = my_object.dynamics(t, (x1[i], x2[j], x3[k]),
-                                                                                                    (uOptU1[0], uOptU2[0], uOptU3[0]),\
-                                                                                                    (dOptU1[0], dOptU2[0], dOptU3[0]))
+                                dx_UU1[0], dx_UU2[0], dx_UU3[0] = my_object.dynamics(
+                                    t,
+                                    (x1[i], x2[j], x3[k]),
+                                    (uOptU1[0], uOptU2[0], uOptU3[0]),
+                                    (dOptU1[0], dOptU2[0], dOptU3[0]),
+                                )
                                 dx_UU1[0] = my_abs(dx_UU1[0])
                                 dx_UU2[0] = my_abs(dx_UU2[0])
                                 dx_UU3[0] = my_abs(dx_UU3[0])
@@ -470,7 +517,10 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
 
                                 diss = hcl.scalar(0, "diss")
                                 diss[0] = 0.5 * (
-                                        deriv_diff1[i, j, k] * alpha1[0] + deriv_diff2[i, j, k] * alpha2[0] + deriv_diff3[i, j, k] * alpha3[0])
+                                    deriv_diff1[i, j, k] * alpha1[0]
+                                    + deriv_diff2[i, j, k] * alpha2[0]
+                                    + deriv_diff3[i, j, k] * alpha3[0]
+                                )
 
                                 # Finally
                                 V_new[i, j, k] = -(V_new[i, j, k] - diss[0])
@@ -486,7 +536,7 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
             result = hcl.update(V_new, lambda i, j, k: V_init[i, j, k] + V_new[i, j, k] * delta_t[0])
         if int_scheme == "second":
             hcl.update(V_new, lambda i, j, k: 0.5 * (V_new[i, j, k] + V_inter[i, j, k]))
-            
+
         if int_scheme == "third":
             hcl.update(V_new, lambda i, j, k: 0.75 * V_inter[i, j, k] + 0.25 * V_new[i, j, k])
 
@@ -533,10 +583,8 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                                 dV_dT[0] = (dV_dT_L + dV_dT_R) / 2
 
                                 # Use method of DubinsCar to solve optimal control instead
-                                uOpt = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]),
-                                                            (dV_dx[0], dV_dy[0], dV_dT[0]))
-                                dOpt = my_object.opt_dstb(t, (x1[i], x2[j], x3[k]),
-                                                        (dV_dx[0], dV_dy[0], dV_dT[0]))
+                                uOpt = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]), (dV_dx[0], dV_dy[0], dV_dT[0]))
+                                dOpt = my_object.opt_dstb(t, (x1[i], x2[j], x3[k]), (dV_dx[0], dV_dy[0], dV_dT[0]))
 
                                 # Calculate dynamical rates of changes
                                 dx1_dt, dx2_dt, dx3_dt = my_object.dynamics(t, (x1[i], x2[j], x3[k]), uOpt, dOpt)
@@ -622,31 +670,40 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                                 dx_LU3 = hcl.scalar(0, "dx_LU3")
 
                                 # Find LOWER BOUND optimal disturbance
-                                dOptL1[0], dOptL2[0], dOptL3[0] = my_object.opt_dstb(t,  (x1[i], x2[j], x3[k]),\
-                                                                                    (min_deriv1[0], min_deriv2[0],min_deriv3[0]))
+                                dOptL1[0], dOptL2[0], dOptL3[0] = my_object.opt_dstb(
+                                    t, (x1[i], x2[j], x3[k]), (min_deriv1[0], min_deriv2[0], min_deriv3[0])
+                                )
 
-                                dOptU1[0], dOptU2[0], dOptU3[0] = my_object.opt_dstb(t, (x1[i], x2[j], x3[k]),\
-                                                                                    (max_deriv1[0], max_deriv2[0],max_deriv3[0]))
+                                dOptU1[0], dOptU2[0], dOptU3[0] = my_object.opt_dstb(
+                                    t, (x1[i], x2[j], x3[k]), (max_deriv1[0], max_deriv2[0], max_deriv3[0])
+                                )
 
                                 # Find LOWER BOUND optimal control
-                                uOptL1[0], uOptL2[0], uOptL3[0] = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]), \
-                                                                                                (min_deriv1[0], min_deriv2[0],min_deriv3[0]))
+                                uOptL1[0], uOptL2[0], uOptL3[0] = my_object.opt_ctrl(
+                                    t, (x1[i], x2[j], x3[k]), (min_deriv1[0], min_deriv2[0], min_deriv3[0])
+                                )
 
                                 # Find UPPER BOUND optimal control
-                                uOptU1[0], uOptU2[0], uOptU3[0] = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k]),
-                                                                                                (max_deriv1[0], max_deriv2[0],
-                                                                                                max_deriv3[0]))
+                                uOptU1[0], uOptU2[0], uOptU3[0] = my_object.opt_ctrl(
+                                    t, (x1[i], x2[j], x3[k]), (max_deriv1[0], max_deriv2[0], max_deriv3[0])
+                                )
                                 # Find magnitude of rates of changes
-                                dx_LL1[0], dx_LL2[0], dx_LL3[0] = my_object.dynamics(t, (x1[i], x2[j], x3[k]),
-                                                                                                (uOptL1[0], uOptL2[0], uOptL3[0]), \
-                                                                                                (dOptL1[0], dOptL2[0], dOptL3[0]))
+                                dx_LL1[0], dx_LL2[0], dx_LL3[0] = my_object.dynamics(
+                                    t,
+                                    (x1[i], x2[j], x3[k]),
+                                    (uOptL1[0], uOptL2[0], uOptL3[0]),
+                                    (dOptL1[0], dOptL2[0], dOptL3[0]),
+                                )
                                 dx_LL1[0] = my_abs(dx_LL1[0])
                                 dx_LL2[0] = my_abs(dx_LL2[0])
                                 dx_LL3[0] = my_abs(dx_LL3[0])
 
-                                dx_LU1[0], dx_LU2[0], dx_LU3[0] = my_object.dynamics(t, (x1[i], x2[j], x3[k]),
-                                                                                                (uOptL1[0], uOptL2[0], uOptL3[0]), \
-                                                                                                (dOptU1[0], dOptU2[0], dOptU3[0]))
+                                dx_LU1[0], dx_LU2[0], dx_LU3[0] = my_object.dynamics(
+                                    t,
+                                    (x1[i], x2[j], x3[k]),
+                                    (uOptL1[0], uOptL2[0], uOptL3[0]),
+                                    (dOptU1[0], dOptU2[0], dOptU3[0]),
+                                )
                                 dx_LU1[0] = my_abs(dx_LU1[0])
                                 dx_LU2[0] = my_abs(dx_LU2[0])
                                 dx_LU3[0] = my_abs(dx_LU3[0])
@@ -656,9 +713,12 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                                 alpha2[0] = my_max(dx_LL2[0], dx_LU2[0])
                                 alpha3[0] = my_max(dx_LL3[0], dx_LU3[0])
 
-                                dx_UL1[0], dx_UL2[0], dx_UL3[0]= my_object.dynamics(t, (x1[i], x2[j], x3[k]),\
-                                                                                                    (uOptU1[0], uOptU2[0], uOptU3[0]), \
-                                                                                                    (dOptL1[0], dOptL2[0], dOptL3[0]))
+                                dx_UL1[0], dx_UL2[0], dx_UL3[0] = my_object.dynamics(
+                                    t,
+                                    (x1[i], x2[j], x3[k]),
+                                    (uOptU1[0], uOptU2[0], uOptU3[0]),
+                                    (dOptL1[0], dOptL2[0], dOptL3[0]),
+                                )
                                 dx_UL1[0] = my_abs(dx_UL1[0])
                                 dx_UL2[0] = my_abs(dx_UL2[0])
                                 dx_UL3[0] = my_abs(dx_UL3[0])
@@ -668,9 +728,12 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                                 alpha2[0] = my_max(alpha2[0], dx_UL2[0])
                                 alpha3[0] = my_max(alpha3[0], dx_UL3[0])
 
-                                dx_UU1[0], dx_UU2[0], dx_UU3[0] = my_object.dynamics(t, (x1[i], x2[j], x3[k]),
-                                                                                                    (uOptU1[0], uOptU2[0], uOptU3[0]),\
-                                                                                                    (dOptU1[0], dOptU2[0], dOptU3[0]))
+                                dx_UU1[0], dx_UU2[0], dx_UU3[0] = my_object.dynamics(
+                                    t,
+                                    (x1[i], x2[j], x3[k]),
+                                    (uOptU1[0], uOptU2[0], uOptU3[0]),
+                                    (dOptU1[0], dOptU2[0], dOptU3[0]),
+                                )
                                 dx_UU1[0] = my_abs(dx_UU1[0])
                                 dx_UU2[0] = my_abs(dx_UU2[0])
                                 dx_UU3[0] = my_abs(dx_UU3[0])
@@ -681,7 +744,10 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
 
                                 diss = hcl.scalar(0, "diss")
                                 diss[0] = 0.5 * (
-                                        deriv_diff1[i, j, k] * alpha1[0] + deriv_diff2[i, j, k] * alpha2[0] + deriv_diff3[i, j, k] * alpha3[0])
+                                    deriv_diff1[i, j, k] * alpha1[0]
+                                    + deriv_diff2[i, j, k] * alpha2[0]
+                                    + deriv_diff3[i, j, k] * alpha3[0]
+                                )
 
                                 # Finally
                                 V_new[i, j, k] = -(V_new[i, j, k] - diss[0])
@@ -696,17 +762,20 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
 
             result = hcl.update(V_new, lambda i, j, k: V_init[i, j, k] + V_new[i, j, k] * delta_t[0])
 
-            hcl.update(V_new, lambda i, j, k: (1.0/3.0) * V_inter[i, j, k] + (2.0/3.0) * V_new[i, j, k])
+            hcl.update(V_new, lambda i, j, k: (1.0 / 3.0) * V_inter[i, j, k] + (2.0 / 3.0) * V_new[i, j, k])
 
         # Different computation method check
-        if compMethod == 'maxVWithV0' or compMethod == 'maxVWithVTarget':
+        if compMethod == "maxVWithV0" or compMethod == "maxVWithVTarget":
             result = hcl.update(V_new, lambda i, j, k: maxVWithV0(i, j, k))
-        if compMethod == 'minVWithV0' or compMethod == 'minVWithVTarget':
+        if compMethod == "minVWithV0" or compMethod == "minVWithVTarget":
             result = hcl.update(V_new, lambda i, j, k: minVWithV0(i, j, k))
-        if compMethod == 'minVWithVInit':
+        if compMethod == "minVWithVInit":
             result = hcl.update(V_new, lambda i, j, k: minVWithVInit(i, j, k))
-        if compMethod == 'maxVWithVInit':
+        if compMethod == "maxVWithVInit":
             result = hcl.update(V_new, lambda i, j, k: maxVWithVInit(i, j, k))
+
+        if global_minimizing == True:
+            result = hcl.update(V_new, lambda i, j, k: minVglobally(i, j, k))
 
         # Copy V_new to V_init
         hcl.update(V_init, lambda i, j, k: V_new[i, j, k])
@@ -738,7 +807,9 @@ def graph_3D(my_object, g, compMethod, accuracy, generate_SpatDeriv=False, deriv
                         Deriv_array[i, j, k] = (dV_dx_L[0] + dV_dx_R[0]) / 2
 
     if generate_SpatDeriv == False:
-        s = hcl.create_schedule([V_f, V_init, x1, x2, x3, t, l0, active_set_placeholder], graph_create)
+        s = hcl.create_schedule(
+            [V_f, V_init, x1, x2, x3, t, l0, active_set_placeholder, global_minimizer_ph], graph_create
+        )
         ##################### CODE OPTIMIZATION HERE ###########################
         if verbose:
             print("Optimizing\n")

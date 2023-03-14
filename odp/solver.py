@@ -135,36 +135,61 @@ class HJSolverClass:
             self.list_x6 = hcl.asarray(list_x6)
         # Get executable, obstacle check intial value function
         print(f"Integration scheme of {int_scheme} order")
+        print("Global minimizing: ", global_minimizing)
         if grid.dims == 3:
-            self.solve_pde = graph_3D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose, int_scheme=int_scheme)
+            self.solve_pde = graph_3D(
+                dynamics_obj,
+                grid,
+                compMethod["TargetSetMode"],
+                accuracy,
+                verbose=verbose,
+                int_scheme=int_scheme,
+                global_minimizing=global_minimizing,
+            )
 
         if grid.dims == 4:
-            self.solve_pde = graph_4D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose, int_scheme=int_scheme)
+            self.solve_pde = graph_4D(
+                dynamics_obj,
+                grid,
+                compMethod["TargetSetMode"],
+                accuracy,
+                verbose=verbose,
+                int_scheme=int_scheme,
+                global_minimizing=global_minimizing,
+            )
 
         if grid.dims == 5:
             self.solve_pde = graph_5D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
 
         if grid.dims == 6:
-            self.solve_pde = graph_6D(dynamics_obj, grid, compMethod["TargetSetMode"], accuracy, verbose=verbose)
+            self.solve_pde = graph_6D(
+                dynamics_obj,
+                grid,
+                compMethod["TargetSetMode"],
+                accuracy,
+                verbose=verbose,
+                global_minimizing=global_minimizing,
+            )
         self.l0 = hcl.asarray(init_value)
         self.initialized = True
         self.execution_time = 0
             
     def __call__(
-            self,
-            dynamics_obj,
-            grid,
-            init_value,
-            tau,
-            compMethod,
-            plot_option,
-            saveAllTimeSteps=False,
-            accuracy="low",
-            untilConvergent=False,
-            epsilon=2e-3,
-            active_set=None,
-            verbose=True,
-            int_scheme="third"
+        self,
+        dynamics_obj,
+        grid,
+        init_value,
+        tau,
+        compMethod,
+        plot_option,
+        saveAllTimeSteps=False,
+        accuracy="low",
+        untilConvergent=False,
+        epsilon=2e-3,
+        active_set=None,
+        verbose=True,
+        int_scheme="third",
+        global_minimizing=False,
     ):
         if not self.initialized:
             self.initialize(
@@ -179,7 +204,8 @@ class HJSolverClass:
                 untilConvergent,
                 epsilon,
                 verbose=verbose,
-                int_scheme=int_scheme
+                int_scheme=int_scheme,
+                global_minimizing=global_minimizing,
             )
         # Tensors input to our computation graph
         V_0 = hcl.asarray(init_value)
@@ -197,8 +223,8 @@ class HJSolverClass:
 
         # Backward reachable set/tube will be computed over the specified time horizon
         # Or until convergent ( which ever happens first )
-        for i in range (1, len(tau)):
-            #tNow = tau[i-1]
+        for i in range(1, len(tau)):
+            # tNow = tau[i-1]
             t_minh = hcl.asarray(np.array((tNow, tau[i])))
 
             while tNow <= tau[i] - 1e-4:
@@ -207,15 +233,62 @@ class HJSolverClass:
                 iter += 1
                 start = time.time()
 
+                global_minimizer = hcl.asarray(np.array([self.l0.asnumpy().min()]))
                 # Run the execution and pass input into graph
                 if grid.dims == 3:
-                    self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, t_minh, self.l0, dummy_flags)
+                    self.solve_pde(
+                        V_1,
+                        V_0,
+                        self.list_x1,
+                        self.list_x2,
+                        self.list_x3,
+                        t_minh,
+                        self.l0,
+                        dummy_flags,
+                        global_minimizer,
+                    )
                 if grid.dims == 4:
-                    self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, self.list_x4, t_minh, self.l0, dummy_flags)
+                    self.solve_pde(
+                        V_1,
+                        V_0,
+                        self.list_x1,
+                        self.list_x2,
+                        self.list_x3,
+                        self.list_x4,
+                        t_minh,
+                        self.l0,
+                        dummy_flags,
+                        global_minimizer,
+                    )
                 if grid.dims == 5:
-                    self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, self.list_x4, self.list_x5 ,t_minh, self.l0, dummy_flags)
+                    self.solve_pde(
+                        V_1,
+                        V_0,
+                        self.list_x1,
+                        self.list_x2,
+                        self.list_x3,
+                        self.list_x4,
+                        self.list_x5,
+                        t_minh,
+                        self.l0,
+                        dummy_flags,
+                        global_minimizer,
+                    )
                 if grid.dims == 6:
-                    self.solve_pde(V_1, V_0, self.list_x1, self.list_x2, self.list_x3, self.list_x4, self.list_x5, self.list_x6, t_minh, self.l0, dummy_flags)
+                    self.solve_pde(
+                        V_1,
+                        V_0,
+                        self.list_x1,
+                        self.list_x2,
+                        self.list_x3,
+                        self.list_x4,
+                        self.list_x5,
+                        self.list_x6,
+                        t_minh,
+                        self.l0,
+                        dummy_flags,
+                        global_minimizer,
+                    )
 
                 tNow = t_minh.asnumpy()[0]
 
