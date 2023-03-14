@@ -83,19 +83,20 @@ class HJSolverClass:
     initialized = False
 
     def initialize(
-            self,
-            dynamics_obj,
-            grid,
-            init_value,
-            tau,
-            compMethod,
-            plot_option,
-            saveAllTimeSteps=False,
-            accuracy="low",
-            untilConvergent=False,
-            epsilon=2e-3,
-            verbose=True,
-            int_scheme="first"
+        self,
+        dynamics_obj,
+        grid,
+        init_value,
+        tau,
+        compMethod,
+        plot_option,
+        saveAllTimeSteps=False,
+        accuracy="low",
+        untilConvergent=False,
+        epsilon=2e-3,
+        verbose=True,
+        int_scheme="first",
+        global_minimizing=False,
     ):
         if verbose:
             print("Welcome to optimized_dp \n")
