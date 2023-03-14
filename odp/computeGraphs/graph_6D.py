@@ -444,8 +444,6 @@ def graph_6D(my_object, g, compMethod, accuracy, verbose=True, global_minimizing
         hcl.update(V_init, lambda i, j, k, l, m, n: V_new[i, j, k, l, m, n])
         return result
 
-    import pdb;
-    pdb.set_trace()
     s = hcl.create_schedule([V_f, V_init, x1, x2, x3, x4, x5, x6, t, l0, active_set, global_minimizer_ph], graph_create)
     ##################### CODE OPTIMIZATION HERE ###########################
     if verbose:
