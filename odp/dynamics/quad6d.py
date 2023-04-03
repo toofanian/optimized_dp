@@ -13,7 +13,7 @@ class Quad6D(OdpDynamics):
         self.moment_of_inertia: float = 1.0
 
         self.min_thrust: float = 0
-        self.max_thrust: float = 18.39375
+        self.max_thrust: float = 18.39375  # 2.5 * 9.81 * 0.75 (mass * g * 0.75)
 
     def dynamics(self, t, state, u_opt, d_opt):
         x1_dot = hcl.scalar(0, 'x1_dot')
@@ -24,11 +24,11 @@ class Quad6D(OdpDynamics):
         x6_dot = hcl.scalar(0, 'x6_dot')
 
         x1_dot[0] = (state[1])
-        x2_dot[0] = ...
+        x2_dot[0] = (-self.drag_coefficient_v/self.mass * state[1]) + ((-hcl.sin(state[4]) / self.mass * u_opt[0]) + (-hcl.sin(state[4]) / self.mass * u_opt[1]))
         x3_dot[0] = (state[3])
-        x4_dot[0] = ...
+        x4_dot[0] = (-self.drag_coefficient_v/self.mass * state[3] - self.gravity) + ((hcl.cos(state[4]) / self.mass * u_opt[0]) + (hcl.cos(state[4]) / self.mass * u_opt[1]))
         x5_dot[0] = (state[5])
-        x6_dot[0] = ...
+        x6_dot[0] = (-self.drag_coefficient_phi / self.moment_of_inertia * state[5]) + ((-self.length_between_copters / self.moment_of_inertia * u_opt[0]) + (self.length_between_copters / self.moment_of_inertia * u_opt[1]))
 
         return x1_dot[0], x2_dot[0], x3_dot[0], x4_dot[0], x5_dot[0], x6_dot[0]
 
@@ -47,10 +47,10 @@ class Quad6D(OdpDynamics):
 
         MaxDV = hcl.scalar(0, "MaxDV")
 
-        SumUU[0] = ...
-        SumUL[0] = ...
-        SumLU[0] = ...
-        SumLL[0] = ...
+        SumUU[0] = spat_deriv[1] * (((-hcl.sin(state[4]) / self.mass * self.max_thrust) + (-hcl.sin(state[4]) / self.mass * self.max_thrust))) + spat_deriv[3] * (((hcl.cos(state[4]) / self.mass * self.max_thrust) + (hcl.cos(state[4]) / self.mass * self.max_thrust))) + spat_deriv[5] * (((-self.length_between_copters / self.moment_of_inertia * self.max_thrust) + (self.length_between_copters / self.moment_of_inertia * self.max_thrust)))
+        SumUL[0] = spat_deriv[1] * (((-hcl.sin(state[4]) / self.mass * self.max_thrust) + (-hcl.sin(state[4]) / self.mass * self.min_thrust))) + spat_deriv[3] * (((hcl.cos(state[4]) / self.mass * self.max_thrust) + (hcl.cos(state[4]) / self.mass * self.min_thrust))) + spat_deriv[5] * (((-self.length_between_copters / self.moment_of_inertia * self.max_thrust) + (self.length_between_copters / self.moment_of_inertia * self.min_thrust)))
+        SumLU[0] = spat_deriv[1] * (((-hcl.sin(state[4]) / self.mass * self.min_thrust) + (-hcl.sin(state[4]) / self.mass * self.max_thrust))) + spat_deriv[3] * (((hcl.cos(state[4]) / self.mass * self.min_thrust) + (hcl.cos(state[4]) / self.mass * self.max_thrust))) + spat_deriv[5] * (((-self.length_between_copters / self.moment_of_inertia * self.min_thrust) + (self.length_between_copters / self.moment_of_inertia * self.max_thrust)))
+        SumLL[0] = spat_deriv[1] * (((-hcl.sin(state[4]) / self.mass * self.min_thrust) + (-hcl.sin(state[4]) / self.mass * self.min_thrust))) + spat_deriv[3] * (((hcl.cos(state[4]) / self.mass * self.min_thrust) + (hcl.cos(state[4]) / self.mass * self.min_thrust))) + spat_deriv[5] * (((-self.length_between_copters / self.moment_of_inertia * self.min_thrust) + (self.length_between_copters / self.moment_of_inertia * self.min_thrust)))
 
         MaxDV[0] = SumUU[0]
         uOpt1[0] = self.max_thrust
@@ -70,7 +70,7 @@ class Quad6D(OdpDynamics):
             uOpt1[0] = self.min_thrust
             uOpt2[0] = self.min_thrust
 
-        return uOpt1[0], uOpt2[0], uOpt3[0], uOpt4[0], uOpt5[0], uOpt6[0]
+        return uOpt1[0], uOpt2[0], uOpt3[0], uOpt4[0]
 
     def opt_dstb(self, t, state, spat_deriv):
         d1 = hcl.scalar(0, "d1")
@@ -80,5 +80,5 @@ class Quad6D(OdpDynamics):
         d5 = hcl.scalar(0, "d5")
         d6 = hcl.scalar(0, "d6")
 
-        return d1[0], d2[0], d3[0], d4[0], d5[0], d6[0]
+        return d1[0], d2[0], d3[0], d4[0]
 
