@@ -65,8 +65,8 @@ def graph_4D(
             )
 
             stepBound[0] = 0.8 / stepBoundInv[0]
-            # with hcl.if_(stepBound < 0.01):
-            #     stepBound[0] = 0.01
+            with hcl.if_(stepBound < 0.01):
+                stepBound[0] = 0.01
             with hcl.if_(stepBound > t[1] - t[0]):
                 stepBound[0] = t[1] - t[0]
 

@@ -12,7 +12,7 @@ def graph_6D(my_object, g, compMethod, accuracy, verbose=True, global_minimizing
     l0 = hcl.placeholder(tuple(g.pts_each_dim), name="l0", dtype=hcl.Float())
     t = hcl.placeholder((2,), name="t", dtype=hcl.Float())
     active_set = hcl.placeholder(tuple(g.pts_each_dim), name="active_set", dtype=hcl.Float())
-    global_minimizer_ph = hcl.placeholder((1, ), name="global_minimizer", dtype=hcl.Float())
+    global_minimizer_ph = hcl.placeholder((1,), name="global_minimizer", dtype=hcl.Float())
 
     # Positions vector
     x1 = hcl.placeholder((g.pts_each_dim[0],), name="x1", dtype=hcl.Float())
@@ -60,9 +60,14 @@ def graph_6D(my_object, g, compMethod, accuracy, verbose=True, global_minimizing
         def step_bound():  # Function to calculate time step
             stepBoundInv = hcl.scalar(0, "stepBoundInv")
             stepBound = hcl.scalar(0, "stepBound")
-            stepBoundInv[0] = max_alpha1[0] / g.dx[0] + max_alpha2[0] / g.dx[1] + max_alpha3[0] / g.dx[2] + max_alpha4[
-                0] / g.dx[3] \
-                              + max_alpha5[0] / g.dx[4] + max_alpha6[0] / g.dx[5]
+            stepBoundInv[0] = (
+                max_alpha1[0] / g.dx[0]
+                + max_alpha2[0] / g.dx[1]
+                + max_alpha3[0] / g.dx[2]
+                + max_alpha4[0] / g.dx[3]
+                + max_alpha5[0] / g.dx[4]
+                + max_alpha6[0] / g.dx[5]
+            )
 
             stepBound[0] = 0.8 / stepBoundInv[0]
 
@@ -79,6 +84,7 @@ def graph_6D(my_object, g, compMethod, accuracy, verbose=True, global_minimizing
         def minVglobally(i, j, k, l, m, n):
             with hcl.if_(V_new[i, j, k, l, m, n] < global_minimizer[0]):
                 V_new[i, j, k, l, m, n] = global_minimizer[0]
+
         # Operation with target value array
         def maxVWithV0(i, j, k, l, m, n):  # Take max
             with hcl.if_(V_new[i, j, k, l, m, n] < l0[i, j, k, l, m, n]):
@@ -161,20 +167,32 @@ def graph_6D(my_object, g, compMethod, accuracy, verbose=True, global_minimizing
                                         dV_dx6[0] = (dV_dx6_L + dV_dx6_R) / 2
 
                                         # Find optimal control
-                                        uOpt = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (
-                                        dV_dx1[0], dV_dx2[0], dV_dx3[0], dV_dx4[0], dV_dx5[0], dV_dx6[0]))
+                                        uOpt = my_object.opt_ctrl(
+                                            t,
+                                            (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]),
+                                            (dV_dx1[0], dV_dx2[0], dV_dx3[0], dV_dx4[0], dV_dx5[0], dV_dx6[0]),
+                                        )
                                         # Find optimal disturbance
-                                        dOpt = my_object.opt_dstb(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (
-                                        dV_dx1[0], dV_dx2[0], dV_dx3[0], dV_dx4[0], dV_dx5[0], dV_dx6[0]))
+                                        dOpt = my_object.opt_dstb(
+                                            t,
+                                            (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]),
+                                            (dV_dx1[0], dV_dx2[0], dV_dx3[0], dV_dx4[0], dV_dx5[0], dV_dx6[0]),
+                                        )
 
                                         # Find rates of changes based on dynamics equation
-                                        dx1_dt, dx2_dt, dx3_dt, dx4_dt, dx5_dt, dx6_dt = my_object.dynamics(t, (
-                                        x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), uOpt, dOpt)
+                                        dx1_dt, dx2_dt, dx3_dt, dx4_dt, dx5_dt, dx6_dt = my_object.dynamics(
+                                            t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), uOpt, dOpt
+                                        )
 
                                         # Calculate Hamiltonian terms:
                                         V_new[i, j, k, l, m, n] = -(
-                                                    dx1_dt * dV_dx1[0] + dx2_dt * dV_dx2[0] + dx3_dt * dV_dx3[0] + dx4_dt *
-                                                    dV_dx4[0] + dx5_dt * dV_dx5[0] + dx6_dt * dV_dx6[0])
+                                            dx1_dt * dV_dx1[0]
+                                            + dx2_dt * dV_dx2[0]
+                                            + dx3_dt * dV_dx3[0]
+                                            + dx4_dt * dV_dx4[0]
+                                            + dx5_dt * dV_dx5[0]
+                                            + dx6_dt * dV_dx6[0]
+                                        )
 
                                         # Get derivMin
                                         with hcl.if_(dV_dx1_L[0] < min_deriv1[0]):
@@ -279,11 +297,17 @@ def graph_6D(my_object, g, compMethod, accuracy, verbose=True, global_minimizing
             """
 
             # Find LOWER BOUND optimal disturbance
-            dOptL1[0], dOptL2[0], dOptL3[0], dOptL4[0] = my_object.opt_dstb(t, (x1[0], x2[0], x3[0], x4[0], x5[0], x6[0]),
-                (min_deriv1[0], min_deriv2[0], min_deriv3[0], min_deriv4[0], min_deriv5[0], min_deriv6[0]))
+            dOptL1[0], dOptL2[0], dOptL3[0], dOptL4[0] = my_object.opt_dstb(
+                t,
+                (x1[0], x2[0], x3[0], x4[0], x5[0], x6[0]),
+                (min_deriv1[0], min_deriv2[0], min_deriv3[0], min_deriv4[0], min_deriv5[0], min_deriv6[0]),
+            )
             # Find UPPER BOUND optimal disturbance
-            dOptU1[0], dOptU2[0], dOptU3[0], dOptU4[0] = my_object.opt_dstb(t, (x1[0], x2[0], x3[0], x4[0], x5[0], x6[0]),
-                (max_deriv1[0], max_deriv2[0], max_deriv3[0], max_deriv4[0], max_deriv5[0], max_deriv6[0]))
+            dOptU1[0], dOptU2[0], dOptU3[0], dOptU4[0] = my_object.opt_dstb(
+                t,
+                (x1[0], x2[0], x3[0], x4[0], x5[0], x6[0]),
+                (max_deriv1[0], max_deriv2[0], max_deriv3[0], max_deriv4[0], max_deriv5[0], max_deriv6[0]),
+            )
             with hcl.for_(0, V_init.shape[0], name="i") as i:
                 with hcl.for_(0, V_init.shape[1], name="j") as j:
                     with hcl.for_(0, V_init.shape[2], name="k") as k:
@@ -321,18 +345,46 @@ def graph_6D(my_object, g, compMethod, accuracy, verbose=True, global_minimizing
                                         dx_UU6 = hcl.scalar(0, "dx_UU6")
 
                                         # Find LOWER BOUND optimal control
-                                        uOptL1[0], uOptL2[0], uOptL3[0], uOptL4[0] = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (
-                                        min_deriv1[0], min_deriv2[0], min_deriv3[0], min_deriv4[0], min_deriv5[0],
-                                        min_deriv6[0]))
+                                        uOptL1[0], uOptL2[0], uOptL3[0], uOptL4[0] = my_object.opt_ctrl(
+                                            t,
+                                            (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]),
+                                            (
+                                                min_deriv1[0],
+                                                min_deriv2[0],
+                                                min_deriv3[0],
+                                                min_deriv4[0],
+                                                min_deriv5[0],
+                                                min_deriv6[0],
+                                            ),
+                                        )
                                         # Find UPPER BOUND optimal control
-                                        uOptU1[0], uOptU2[0], uOptU3[0], uOptU4[0] = my_object.opt_ctrl(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (
-                                        max_deriv1[0], max_deriv2[0], max_deriv3[0], max_deriv4[0], max_deriv5[0],
-                                        max_deriv6[0]))
+                                        uOptU1[0], uOptU2[0], uOptU3[0], uOptU4[0] = my_object.opt_ctrl(
+                                            t,
+                                            (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]),
+                                            (
+                                                max_deriv1[0],
+                                                max_deriv2[0],
+                                                max_deriv3[0],
+                                                max_deriv4[0],
+                                                max_deriv5[0],
+                                                max_deriv6[0],
+                                            ),
+                                        )
 
                                         # Get upper bound and lower bound rates of changes
-                                        dx_LL1[0], dx_LL2[0], dx_LL3[0], dx_LL4[0], dx_LL5[0], dx_LL6[
-                                            0] = my_object.dynamics(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (uOptL1[0], uOptL2[0], uOptL3[0], uOptL4[0]),
-                                                                    (dOptL1[0], dOptL2[0], dOptL3[0], dOptL4[0]))
+                                        (
+                                            dx_LL1[0],
+                                            dx_LL2[0],
+                                            dx_LL3[0],
+                                            dx_LL4[0],
+                                            dx_LL5[0],
+                                            dx_LL6[0],
+                                        ) = my_object.dynamics(
+                                            t,
+                                            (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]),
+                                            (uOptL1[0], uOptL2[0], uOptL3[0], uOptL4[0]),
+                                            (dOptL1[0], dOptL2[0], dOptL3[0], dOptL4[0]),
+                                        )
                                         # Get absolute value of each
                                         dx_LL1[0] = my_abs(dx_LL1[0])
                                         dx_LL2[0] = my_abs(dx_LL2[0])
@@ -341,9 +393,19 @@ def graph_6D(my_object, g, compMethod, accuracy, verbose=True, global_minimizing
                                         dx_LL5[0] = my_abs(dx_LL5[0])
                                         dx_LL6[0] = my_abs(dx_LL6[0])
 
-                                        dx_UL1[0], dx_UL2[0], dx_UL3[0], dx_UL4[0], dx_UL5[0], dx_UL6[
-                                            0] = my_object.dynamics(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (uOptU1[0], uOptU2[0], uOptU3[0], uOptU4[0]),
-                                                                    (dOptL1[0], dOptL2[0], dOptL3[0], dOptL4[0]))
+                                        (
+                                            dx_UL1[0],
+                                            dx_UL2[0],
+                                            dx_UL3[0],
+                                            dx_UL4[0],
+                                            dx_UL5[0],
+                                            dx_UL6[0],
+                                        ) = my_object.dynamics(
+                                            t,
+                                            (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]),
+                                            (uOptU1[0], uOptU2[0], uOptU3[0], uOptU4[0]),
+                                            (dOptL1[0], dOptL2[0], dOptL3[0], dOptL4[0]),
+                                        )
                                         # Get absolute value of each
                                         dx_UL1[0] = my_abs(dx_UL1[0])
                                         dx_UL2[0] = my_abs(dx_UL2[0])
@@ -360,9 +422,19 @@ def graph_6D(my_object, g, compMethod, accuracy, verbose=True, global_minimizing
                                         alpha5[0] = my_max(dx_UL5[0], dx_LL5[0])
                                         alpha6[0] = my_max(dx_UL6[0], dx_LL6[0])
 
-                                        dx_LU1[0], dx_LU2[0], dx_LU3[0], dx_LU4[0], dx_LU5[0], dx_LU6[
-                                            0] = my_object.dynamics(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (uOptL1[0], uOptL2[0], uOptL3[0], uOptL4[0]),
-                                                                    (dOptU1[0], dOptU2[0], dOptU3[0], dOptU4[0]))
+                                        (
+                                            dx_LU1[0],
+                                            dx_LU2[0],
+                                            dx_LU3[0],
+                                            dx_LU4[0],
+                                            dx_LU5[0],
+                                            dx_LU6[0],
+                                        ) = my_object.dynamics(
+                                            t,
+                                            (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]),
+                                            (uOptL1[0], uOptL2[0], uOptL3[0], uOptL4[0]),
+                                            (dOptU1[0], dOptU2[0], dOptU3[0], dOptU4[0]),
+                                        )
                                         # Get absolute value of each
                                         dx_LU1[0] = my_abs(dx_LU1[0])
                                         dx_LU2[0] = my_abs(dx_LU2[0])
@@ -378,9 +450,19 @@ def graph_6D(my_object, g, compMethod, accuracy, verbose=True, global_minimizing
                                         alpha5[0] = my_max(alpha5[0], dx_LU5[0])
                                         alpha6[0] = my_max(alpha6[0], dx_LU6[0])
 
-                                        dx_UU1[0], dx_UU2[0], dx_UU3[0], dx_UU4[0], dx_UU5[0], dx_UU6[
-                                            0] = my_object.dynamics(t, (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]), (uOptU1[0], uOptU2[0], uOptU3[0], uOptU4[0]),
-                                                                    (dOptU1[0], dOptU2[0], dOptU3[0], dOptU4[0]))
+                                        (
+                                            dx_UU1[0],
+                                            dx_UU2[0],
+                                            dx_UU3[0],
+                                            dx_UU4[0],
+                                            dx_UU5[0],
+                                            dx_UU6[0],
+                                        ) = my_object.dynamics(
+                                            t,
+                                            (x1[i], x2[j], x3[k], x4[l], x5[m], x6[n]),
+                                            (uOptU1[0], uOptU2[0], uOptU3[0], uOptU4[0]),
+                                            (dOptU1[0], dOptU2[0], dOptU3[0], dOptU4[0]),
+                                        )
                                         dx_UU1[0] = my_abs(dx_UU1[0])
                                         dx_UU2[0] = my_abs(dx_UU2[0])
                                         dx_UU3[0] = my_abs(dx_UU3[0])
@@ -396,12 +478,14 @@ def graph_6D(my_object, g, compMethod, accuracy, verbose=True, global_minimizing
                                         alpha6[0] = my_max(alpha6[0], dx_UU6[0])
 
                                         diss = hcl.scalar(0, "diss")
-                                        diss[0] = 0.5 * (deriv_diff1[i, j, k, l, m, n] * alpha1[0] + deriv_diff2[
-                                            i, j, k, l, m, n] * alpha2[0] \
-                                                         + deriv_diff3[i, j, k, l, m, n] * alpha3[0] + deriv_diff4[
-                                                             i, j, k, l, m, n] * alpha4[0] \
-                                                         + deriv_diff5[i, j, k, l, m, n] * alpha5[0] + deriv_diff6[
-                                                             i, j, k, l, m, n] * alpha6[0])
+                                        diss[0] = 0.5 * (
+                                            deriv_diff1[i, j, k, l, m, n] * alpha1[0]
+                                            + deriv_diff2[i, j, k, l, m, n] * alpha2[0]
+                                            + deriv_diff3[i, j, k, l, m, n] * alpha3[0]
+                                            + deriv_diff4[i, j, k, l, m, n] * alpha4[0]
+                                            + deriv_diff5[i, j, k, l, m, n] * alpha5[0]
+                                            + deriv_diff6[i, j, k, l, m, n] * alpha6[0]
+                                        )
 
                                         # Finally
                                         V_new[i, j, k, l, m, n] = -(V_new[i, j, k, l, m, n] - diss[0])
@@ -427,15 +511,16 @@ def graph_6D(my_object, g, compMethod, accuracy, verbose=True, global_minimizing
 
         # Integrate
         # if compMethod == 'HJ_PDE':
-        result = hcl.update(V_new,
-                            lambda i, j, k, l, m, n: V_init[i, j, k, l, m, n] + V_new[i, j, k, l, m, n] * delta_t[0])
-        if compMethod == 'maxVWithV0' or compMethod == 'maxVWithVTarget':
+        result = hcl.update(
+            V_new, lambda i, j, k, l, m, n: V_init[i, j, k, l, m, n] + V_new[i, j, k, l, m, n] * delta_t[0]
+        )
+        if compMethod == "maxVWithV0" or compMethod == "maxVWithVTarget":
             result = hcl.update(V_new, lambda i, j, k, l, m, n: maxVWithV0(i, j, k, l, m, n))
-        if compMethod == 'minVWithV0' or compMethod == 'minVWithVTarget':
+        if compMethod == "minVWithV0" or compMethod == "minVWithVTarget":
             result = hcl.update(V_new, lambda i, j, k, l, m, n: minVWithV0(i, j, k, l, m, n))
-        if compMethod == 'maxVWithVInit':
+        if compMethod == "maxVWithVInit":
             result = hcl.update(V_new, lambda i, j, k, l, m, n: maxVWithVInit(i, j, k, l, m, n))
-        if compMethod == 'minVWithVInit':
+        if compMethod == "minVWithVInit":
             result = hcl.update(V_new, lambda i, j, k, l, m, n: minVWithVInit(i, j, k, l, m, n))
 
         if global_minimizing == True:
@@ -462,4 +547,4 @@ def graph_6D(my_object, g, compMethod, accuracy, verbose=True, global_minimizing
     #    print(hcl.lower(s))
 
     # Return executable
-    return (hcl.build(s))
+    return hcl.build(s)
